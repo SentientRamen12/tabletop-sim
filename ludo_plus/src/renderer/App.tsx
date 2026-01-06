@@ -14,11 +14,25 @@ export default function App() {
   const [playerCount, setPlayerCount] = useState(4)
   const [selectedColor, setSelectedColor] = useState<PlayerColor>('red')
 
+  const handleExit = () => setGameStarted(false)
+
   if (!gameStarted) {
     return (
       <div className="start-screen">
-        <h1>Ludo Plus</h1>
+        <h1>Lodu</h1>
         <p className="subtitle">A card-based race to the center</p>
+
+        <div className="rules-box">
+          <h3>How to Play</h3>
+          <ul>
+            <li>Play a card to move a piece or enter a new piece</li>
+            <li>Race your 4 pieces around the spiral to the center</li>
+            <li>Land on opponents to send them home (except safe spots)</li>
+            <li>Max 2 pieces per cell; safe spots allow coexistence</li>
+            <li>Exact card needed to reach center</li>
+            <li>First to get all pieces to center wins</li>
+          </ul>
+        </div>
 
         <div className="option-row">
           <label>Your Color:</label>
@@ -62,7 +76,7 @@ export default function App() {
           <Board />
         </div>
         <div className="game-sidebar">
-          <GameStatus />
+          <GameStatus onExit={handleExit} />
           <CardHand />
           <PlayerHome />
         </div>

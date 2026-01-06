@@ -1,8 +1,12 @@
 import { useGame } from '../game/GameContext'
 import './GameStatus.css'
 
-export default function GameStatus() {
-  const { state, skipTurn, resetGame } = useGame()
+interface GameStatusProps {
+  onExit: () => void
+}
+
+export default function GameStatus({ onExit }: GameStatusProps) {
+  const { state, skipTurn } = useGame()
 
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
 
@@ -10,11 +14,11 @@ export default function GameStatus() {
     const winner = state.players.find(p => p.id === state.winner)
     return (
       <div className="game-status game-over">
-        <h2>🎉 Game Over!</h2>
+        <h2>Game Over!</h2>
         <p className={`winner winner-${winner?.color}`}>
           {winner?.name} wins!
         </p>
-        <button onClick={() => resetGame()}>Play Again</button>
+        <button onClick={onExit}>Play Again</button>
       </div>
     )
   }
@@ -57,6 +61,9 @@ export default function GameStatus() {
           Skip Turn
         </button>
       )}
+      <button className="exit-btn" onClick={onExit}>
+        Exit Game
+      </button>
     </div>
   )
 }

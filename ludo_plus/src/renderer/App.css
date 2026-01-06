@@ -35,6 +35,35 @@ body {
   margin-top: -0.5rem;
 }
 
+.rules-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  max-width: 400px;
+  text-align: left;
+}
+
+.rules-box h3 {
+  color: #eee;
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.rules-box ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.rules-box li {
+  margin-bottom: 0.25rem;
+}
+
 .option-row {
   display: flex;
   align-items: center;
