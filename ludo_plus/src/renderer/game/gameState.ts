@@ -1,4 +1,4 @@
-import type { GameState, GameAction, Player, Piece, PlayerColor } from '../../shared/types'
+import type { GameState, GameAction, Player, Piece, PlayerColor, LogEntry } from '../../shared/types'
 import { createPlayerHand, playCard, drawCard, getCardById } from './deck'
 import {
   ENTRY_POSITIONS,
@@ -48,7 +48,25 @@ export function createInitialState(playerCount: number = 4, humanColor: PlayerCo
     currentPlayerId: players[0].id,
     phase: 'select_card',
     selectedCard: null,
-    winner: null
+    winner: null,
+    log: []
+  }
+}
+
+let logIdCounter = 0
+function createLogEntry(
+  player: Player,
+  action: LogEntry['action'],
+  cardValue?: number,
+  targetPlayer?: string
+): LogEntry {
+  return {
+    id: `log-${++logIdCounter}`,
+    playerName: player.name,
+    playerColor: player.color,
+    action,
+    cardValue,
+    targetPlayer
   }
 }
 
@@ -65,6 +83,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         selectedCard: card,
         phase: 'select_action'
+      }
+    }
+
+    case 'UNSELECT_CARD': {
+      if (state.phase !== 'select_action') return state
+
+      return {
+        ...state,
+        selectedCard: null,
+        phase: 'select_card'
       }
     }
 
@@ -103,11 +131,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         h.playerId === state.currentPlayerId ? hand : h
       )
 
+      const logEntry = createLogEntry(player, 'entered', state.selectedCard.value)
+
       return endTurn({
         ...state,
         pieces: newPieces,
         hands: newHands,
-        selectedCard: null
+        selectedCard: null,
+        log: [...state.log, logEntry]
       })
     }
 
@@ -147,6 +178,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       // Handle opponent interaction
+      let capturedPlayer: Player | undefined
       if (!isFinishing && opponentPieces.length > 0) {
         const isSafe = isSafePosition(newPos)
         const opponentOnColoredSafe = opponentPieces.some(p => isColoredSafe(newPos, p.color))
@@ -155,6 +187,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           // Safe spot: coexist (no capture), already checked 2-piece limit above
         } else {
           // Not safe: capture the opponent
+          capturedPlayer = state.players.find(p => p.id === opponentPieces[0].playerId)
           newPieces = newPieces.map(p =>
             p.id === opponentPieces[0].id
               ? { ...p, position: null, pathIndex: -1 }
@@ -177,6 +210,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         h.playerId === state.currentPlayerId ? hand : h
       )
 
+      // Build log entries
+      const newLog = [...state.log]
+      if (isFinishing) {
+        newLog.push(createLogEntry(player, 'finished', state.selectedCard.value))
+      } else {
+        newLog.push(createLogEntry(player, 'moved', state.selectedCard.value))
+      }
+      if (capturedPlayer) {
+        newLog.push(createLogEntry(player, 'captured', undefined, capturedPlayer.name))
+      }
+
       const playerPieces = newPieces.filter(p => p.playerId === state.currentPlayerId)
       const allFinished = playerPieces.every(p => p.isFinished)
 
@@ -187,7 +231,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           hands: newHands,
           selectedCard: null,
           phase: 'game_over',
-          winner: state.currentPlayerId
+          winner: state.currentPlayerId,
+          log: newLog
         }
       }
 
@@ -195,11 +240,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         pieces: newPieces,
         hands: newHands,
-        selectedCard: null
+        selectedCard: null,
+        log: newLog
       })
     }
 
     case 'END_TURN': {
+      const player = state.players.find(p => p.id === state.currentPlayerId)
+      if (player && state.phase === 'select_action') {
+        const logEntry = createLogEntry(player, 'skipped')
+        return endTurn({
+          ...state,
+          log: [...state.log, logEntry]
+        })
+      }
       return endTurn(state)
     }
 

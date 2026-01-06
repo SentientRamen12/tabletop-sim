@@ -4,6 +4,7 @@ import Board from './components/Board'
 import CardHand from './components/CardHand'
 import PlayerHome from './components/PlayerHome'
 import GameStatus from './components/GameStatus'
+import GameLog from './components/GameLog'
 import type { PlayerColor } from '../shared/types'
 import './App.css'
 
@@ -72,6 +73,9 @@ export default function App() {
   return (
     <GameProvider playerCount={playerCount} humanColor={selectedColor}>
       <div className="game-container">
+        <div className="game-log-area">
+          <GameLog />
+        </div>
         <div className="game-board-area">
           <Board />
         </div>

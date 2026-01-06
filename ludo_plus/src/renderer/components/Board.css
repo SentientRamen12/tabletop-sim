@@ -1,3 +1,42 @@
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: #2a2a4a;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.status-move {
+  color: #4fc3f7;
+}
+
+.status-waiting {
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.status-open {
+  color: #81c784;
+}
+
+.status-goal {
+  color: #ffd54f;
+}
+
+.status-divider {
+  color: #555;
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -136,4 +175,51 @@
   50% {
     box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
   }
+}
+
+/* Right-angled corner triangles for spiral direction */
+.spiral-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  z-index: 2;
+}
+
+/* Colors */
+.arrow-red { --arrow-color: #e94560; }
+.arrow-blue { --arrow-color: #4fc3f7; }
+.arrow-green { --arrow-color: #81c784; }
+.arrow-yellow { --arrow-color: #f9c74f; }
+
+/* Right-angled triangles at corners - the direction indicates which corner */
+/* top-left corner triangle (points toward bottom-right) */
+.arrow-tl {
+  top: 0;
+  left: 0;
+  border-top: 14px solid var(--arrow-color);
+  border-right: 14px solid transparent;
+}
+
+/* top-right corner triangle (points toward bottom-left) */
+.arrow-tr {
+  top: 0;
+  right: 0;
+  border-top: 14px solid var(--arrow-color);
+  border-left: 14px solid transparent;
+}
+
+/* bottom-left corner triangle (points toward top-right) */
+.arrow-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 14px solid var(--arrow-color);
+  border-right: 14px solid transparent;
+}
+
+/* bottom-right corner triangle (points toward top-left) */
+.arrow-br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 14px solid var(--arrow-color);
+  border-left: 14px solid transparent;
 }

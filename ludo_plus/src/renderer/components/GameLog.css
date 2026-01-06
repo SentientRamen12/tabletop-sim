@@ -1,0 +1,161 @@
+.game-log {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-log h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.log-count {
+  background: rgba(255, 255, 255, 0.1);
+  color: #888;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.log-entries {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty-log {
+  color: #555;
+  font-style: italic;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.log-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid currentColor;
+  animation: fadeSlide 0.2s ease-out;
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.log-player {
+  font-weight: 700;
+  min-width: 42px;
+}
+
+.log-action {
+  color: #888;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.log-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #2a2a4a, #1a1a3a);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.log-target {
+  color: #666;
+  font-size: 0.7rem;
+  margin-left: auto;
+}
+
+.log-red {
+  color: #e94560;
+}
+
+.log-red .log-card {
+  border-color: #e94560;
+  box-shadow: 0 0 8px rgba(233, 69, 96, 0.2);
+}
+
+.log-blue {
+  color: #4fc3f7;
+}
+
+.log-blue .log-card {
+  border-color: #4fc3f7;
+  box-shadow: 0 0 8px rgba(79, 195, 247, 0.2);
+}
+
+.log-green {
+  color: #81c784;
+}
+
+.log-green .log-card {
+  border-color: #81c784;
+  box-shadow: 0 0 8px rgba(129, 199, 132, 0.2);
+}
+
+.log-yellow {
+  color: #ffd54f;
+}
+
+.log-yellow .log-card {
+  border-color: #ffd54f;
+  box-shadow: 0 0 8px rgba(255, 213, 79, 0.2);
+}
+
+.log-entries::-webkit-scrollbar {
+  width: 4px;
+}
+
+.log-entries::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-entries::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.log-entries::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

@@ -1,10 +1,15 @@
 import { useGame } from '../game/GameContext'
-import { BOARD_SIZE, getCellType, getEntryColor, getColoredSafeColor } from '../game/board'
+import { BOARD_SIZE, getCellType, getEntryColor, getColoredSafeColor, getSpiralArrows } from '../game/board'
 import type { Piece } from '../../shared/types'
 import './Board.css'
 
 export default function Board() {
-  const { state, movePiece, enterPiece, canMovePiece, canEnterPiece } = useGame()
+  const { state, movePiece, enterPiece, canMovePiece, canEnterPiece, humanPlayerId } = useGame()
+
+  const humanPlayer = state.players.find(p => p.id === humanPlayerId)
+  const humanPieces = state.pieces.filter(p => p.playerId === humanPlayerId)
+  const openPieces = humanPieces.filter(p => p.position !== null && !p.isFinished).length
+  const finishedPieces = humanPieces.filter(p => p.isFinished).length
 
   const getPiecesAtCell = (row: number, col: number): Piece[] => {
     return state.pieces.filter(
@@ -55,6 +60,7 @@ export default function Board() {
       const cellType = getCellType(row, col)
       const entryColor = getEntryColor(row, col)
       const coloredSafeColor = getColoredSafeColor(row, col)
+      const arrows = getSpiralArrows(row, col)
       const pieces = getPiecesAtCell(row, col)
 
       grid.push(
@@ -62,11 +68,32 @@ export default function Board() {
           key={`${row}-${col}`}
           className={`cell cell-${cellType} ${entryColor ? `entry-${entryColor}` : ''} ${coloredSafeColor ? `colored-safe-${coloredSafeColor}` : ''}`}
         >
+          {arrows.map((arrow, idx) => (
+            <div
+              key={`arrow-${idx}`}
+              className={`spiral-arrow arrow-${arrow.corner} arrow-${arrow.color}`}
+            />
+          ))}
           {renderPieces(pieces)}
         </div>
       )
     }
   }
 
-  return <div className="board">{grid}</div>
+  return (
+    <div className="board-wrapper">
+      <div className="action-status">
+        {state.selectedCard ? (
+          <span className="status-move">Move {state.selectedCard.value}</span>
+        ) : (
+          <span className="status-waiting">Select a card</span>
+        )}
+        <span className="status-divider">|</span>
+        <span className="status-open">Open {openPieces}</span>
+        <span className="status-divider">|</span>
+        <span className="status-goal">Reached Goal {finishedPieces}</span>
+      </div>
+      <div className="board">{grid}</div>
+    </div>
+  )
 }

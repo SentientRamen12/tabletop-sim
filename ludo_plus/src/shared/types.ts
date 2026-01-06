@@ -33,6 +33,15 @@ export interface PlayerHand {
   discard: Card[]
 }
 
+export interface LogEntry {
+  id: string
+  playerName: string
+  playerColor: PlayerColor
+  action: 'moved' | 'entered' | 'captured' | 'finished' | 'skipped'
+  cardValue?: number
+  targetPlayer?: string
+}
+
 export interface GameState {
   players: Player[]
   pieces: Piece[]
@@ -41,10 +50,12 @@ export interface GameState {
   phase: 'select_card' | 'select_action' | 'game_over'
   selectedCard: Card | null
   winner: string | null
+  log: LogEntry[]
 }
 
 export type GameAction =
   | { type: 'SELECT_CARD'; cardId: string }
+  | { type: 'UNSELECT_CARD' }
   | { type: 'MOVE_PIECE'; pieceId: string }
   | { type: 'ENTER_PIECE'; pieceId: string }
   | { type: 'END_TURN' }

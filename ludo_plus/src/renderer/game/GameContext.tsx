@@ -5,6 +5,7 @@ import { gameReducer, createInitialState, getValidMoves } from './gameState'
 interface GameContextType {
   state: GameState
   selectCard: (cardId: string) => void
+  unselectCard: () => void
   enterPiece: (pieceId: string) => void
   movePiece: (pieceId: string) => void
   skipTurn: () => void
@@ -34,6 +35,10 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
 
   const selectCard = useCallback((cardId: string) => {
     dispatch({ type: 'SELECT_CARD', cardId })
+  }, [])
+
+  const unselectCard = useCallback(() => {
+    dispatch({ type: 'UNSELECT_CARD' })
   }, [])
 
   const enterPiece = useCallback((pieceId: string) => {
@@ -120,6 +125,7 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
       value={{
         state,
         selectCard,
+        unselectCard,
         enterPiece,
         movePiece,
         skipTurn,

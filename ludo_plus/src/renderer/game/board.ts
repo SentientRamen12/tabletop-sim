@@ -129,6 +129,41 @@ export const COLORED_SAFE_POSITIONS: Record<PlayerColor, Position> = {
 
 export const MAX_PIECES_PER_CELL = 2
 
+// Right-angled corner triangles marking spiral turn points
+// Corner indicates which corner the triangle is in - hypotenuse POINTS toward spiral direction
+// tl corner → points bottom-right | tr corner → points bottom-left
+// bl corner → points top-right    | br corner → points top-left
+type ArrowCorner = 'tl' | 'tr' | 'bl' | 'br'
+type SpiralArrow = { position: Position; corner: ArrowCorner }
+
+// Arrows in corner matching direction toward center
+export const SPIRAL_ARROWS: Record<PlayerColor, SpiralArrow[]> = {
+  // Red enters from top, moves toward bottom-left → bl corner
+  red: [
+    { position: { row: 0, col: 4 }, corner: 'bl' },
+    { position: { row: 1, col: 4 }, corner: 'bl' },
+    { position: { row: 2, col: 4 }, corner: 'bl' },
+  ],
+  // Blue enters from right, moves toward top-left → tl corner
+  blue: [
+    { position: { row: 4, col: 6 }, corner: 'tl' },  
+    { position: { row: 4, col: 5 }, corner: 'tl' },  
+    { position: { row: 4, col: 4 }, corner: 'tl' },  
+  ],
+  // Green enters from bottom, moves toward top-right → tr corner
+  green: [
+    { position: { row: 4, col: 2 }, corner: 'tr' }, 
+    { position: { row: 5, col: 2 }, corner: 'tr' },  
+    { position: { row: 6, col: 2 }, corner: 'tr' },  
+  ],
+  // Yellow enters from left, moves toward bottom-right → br corner
+  yellow: [
+    { position: { row: 2, col: 0 }, corner: 'br' },
+    { position: { row: 2, col: 1 }, corner: 'br' },  
+    { position: { row: 2, col: 2 }, corner: 'br' },  
+  ]
+}
+
 export function isSafePosition(pos: Position): boolean {
   return SAFE_POSITIONS.some(s => s.row === pos.row && s.col === pos.col)
 }
@@ -194,4 +229,16 @@ export function getEntryColor(row: number, col: number): PlayerColor | null {
     if (pos.row === row && pos.col === col) return color as PlayerColor
   }
   return null
+}
+
+export function getSpiralArrows(row: number, col: number): { color: PlayerColor; corner: ArrowCorner }[] {
+  const arrows: { color: PlayerColor; corner: ArrowCorner }[] = []
+  for (const [color, entries] of Object.entries(SPIRAL_ARROWS)) {
+    for (const entry of entries) {
+      if (entry.position.row === row && entry.position.col === col) {
+        arrows.push({ color: color as PlayerColor, corner: entry.corner })
+      }
+    }
+  }
+  return arrows
 }
