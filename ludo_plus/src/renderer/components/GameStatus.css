@@ -1,0 +1,123 @@
+.game-status {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.game-status.game-over {
+  text-align: center;
+}
+
+.game-status h2 {
+  color: #eee;
+  margin: 0 0 0.5rem 0;
+}
+
+.winner {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.winner-red { color: #e94560; }
+.winner-blue { color: #0f4c75; }
+.winner-green { color: #3a9679; }
+.winner-yellow { color: #f9c74f; }
+
+.game-status button {
+  padding: 0.75rem 2rem;
+  background: #e94560;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.game-status button:hover {
+  background: #c73e54;
+}
+
+.current-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.current-turn .label {
+  color: #888;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.player-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.player-red { color: #e94560; }
+.player-blue { color: #0f4c75; }
+.player-green { color: #3a9679; }
+.player-yellow { color: #f9c74f; }
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.player-row.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.player-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dot-red { background: #e94560; }
+.dot-blue { background: #0f4c75; }
+.dot-green { background: #3a9679; }
+.dot-yellow { background: #f9c74f; }
+
+.player-label {
+  color: #eee;
+  flex: 1;
+}
+
+.player-stats {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.skip-btn {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.skip-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #eee;
+}

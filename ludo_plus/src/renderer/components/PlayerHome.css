@@ -1,0 +1,91 @@
+.player-home {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.player-home h3 {
+  color: #eee;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.home-pieces {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.home-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.label {
+  color: #888;
+  font-size: 0.8rem;
+  min-width: 60px;
+}
+
+.pieces-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.home-piece {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.home-piece.piece-red {
+  background: linear-gradient(135deg, #e94560, #c73e54);
+}
+
+.home-piece.piece-blue {
+  background: linear-gradient(135deg, #0f4c75, #0a3a5c);
+}
+
+.home-piece.piece-green {
+  background: linear-gradient(135deg, #3a9679, #2d7a62);
+}
+
+.home-piece.piece-yellow {
+  background: linear-gradient(135deg, #f9c74f, #e0b045);
+}
+
+.home-piece.selectable {
+  cursor: pointer;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.home-piece.selectable:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+}
+
+.home-piece.finished {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.empty {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+  }
+}
