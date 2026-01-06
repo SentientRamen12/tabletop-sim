@@ -14,6 +14,7 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(false)
   const [playerCount, setPlayerCount] = useState(4)
   const [selectedColor, setSelectedColor] = useState<PlayerColor>('red')
+  const [isHotseat, setIsHotseat] = useState(false)
 
   const handleExit = () => setGameStarted(false)
 
@@ -36,7 +37,25 @@ export default function App() {
         </div>
 
         <div className="option-row">
-          <label>Your Color:</label>
+          <label>Mode:</label>
+          <div className="mode-buttons">
+            <button
+              className={!isHotseat ? 'selected' : ''}
+              onClick={() => setIsHotseat(false)}
+            >
+              vs AI
+            </button>
+            <button
+              className={isHotseat ? 'selected' : ''}
+              onClick={() => setIsHotseat(true)}
+            >
+              Hotseat
+            </button>
+          </div>
+        </div>
+
+        <div className="option-row">
+          <label>{isHotseat ? 'Start Color:' : 'Your Color:'}</label>
           <div className="color-buttons">
             {COLORS.map(c => (
               <button
@@ -71,7 +90,7 @@ export default function App() {
   }
 
   return (
-    <GameProvider playerCount={playerCount} humanColor={selectedColor}>
+    <GameProvider playerCount={playerCount} humanColor={selectedColor} isHotseat={isHotseat}>
       <div className="game-container">
         <div className="game-log-area">
           <GameLog />

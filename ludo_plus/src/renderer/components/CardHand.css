@@ -58,3 +58,32 @@
   margin: 0.75rem 0 0 0;
   text-align: center;
 }
+
+.turn-header {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.turn-red { color: #e94560; }
+.turn-blue { color: #4fc3f7; }
+.turn-green { color: #81c784; }
+.turn-yellow { color: #f9c74f; }
+
+.start-turn-btn {
+  width: 100%;
+  padding: 1.5rem 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #3a3a5a, #2a2a4a);
+  border: 2px solid #4a4a6a;
+  border-radius: 12px;
+  color: #eee;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.start-turn-btn:hover {
+  background: linear-gradient(135deg, #4a4a6a, #3a3a5a);
+  border-color: #5a5a7a;
+  transform: scale(1.02);
+}

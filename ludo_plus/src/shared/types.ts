@@ -51,6 +51,8 @@ export interface GameState {
   selectedCard: Card | null
   winner: string | null
   log: LogEntry[]
+  isHotseat: boolean
+  turnReady: boolean
 }
 
 export type GameAction =
@@ -59,4 +61,5 @@ export type GameAction =
   | { type: 'MOVE_PIECE'; pieceId: string }
   | { type: 'ENTER_PIECE'; pieceId: string }
   | { type: 'END_TURN' }
-  | { type: 'RESET_GAME'; playerCount: number; humanColor: PlayerColor }
+  | { type: 'START_TURN' }
+  | { type: 'RESET_GAME'; playerCount: number; humanColor: PlayerColor; isHotseat: boolean }

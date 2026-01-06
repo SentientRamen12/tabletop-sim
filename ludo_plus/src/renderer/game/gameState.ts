@@ -13,16 +13,23 @@ import {
 const ALL_COLORS: PlayerColor[] = ['red', 'blue', 'green', 'yellow']
 const PIECES_PER_PLAYER = 4
 
-export function createInitialState(playerCount: number = 4, humanColor: PlayerColor = 'red'): GameState {
+export function createInitialState(playerCount: number = 4, humanColor: PlayerColor = 'red', isHotseat: boolean = false): GameState {
   // Reorder colors so human's choice is first
   const otherColors = ALL_COLORS.filter(c => c !== humanColor)
   const colors = [humanColor, ...otherColors].slice(0, playerCount)
 
+  const colorNames: Record<PlayerColor, string> = {
+    red: 'Red',
+    blue: 'Blue',
+    green: 'Green',
+    yellow: 'Yellow'
+  }
+
   const players: Player[] = colors.map((color, idx) => ({
     id: `player-${idx}`,
     color,
-    name: idx === 0 ? 'You' : `CPU ${idx}`,
-    isAI: idx > 0
+    name: isHotseat ? colorNames[color] : (idx === 0 ? 'You' : `CPU ${idx}`),
+    isAI: isHotseat ? false : idx > 0
   }))
 
   const pieces: Piece[] = []
@@ -49,7 +56,9 @@ export function createInitialState(playerCount: number = 4, humanColor: PlayerCo
     phase: 'select_card',
     selectedCard: null,
     winner: null,
-    log: []
+    log: [],
+    isHotseat,
+    turnReady: !isHotseat // In hotseat mode, first player must click to start
   }
 }
 
@@ -257,8 +266,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return endTurn(state)
     }
 
+    case 'START_TURN': {
+      if (state.turnReady) return state
+      return {
+        ...state,
+        turnReady: true
+      }
+    }
+
     case 'RESET_GAME': {
-      return createInitialState(action.playerCount, action.humanColor)
+      return createInitialState(action.playerCount, action.humanColor, action.isHotseat)
     }
 
     default:
@@ -271,11 +288,15 @@ function endTurn(state: GameState): GameState {
   const nextIndex = (currentIndex + 1) % state.players.length
   const nextPlayer = state.players[nextIndex]
 
+  // In hotseat mode, human players need to click to start their turn
+  const turnReady = state.isHotseat ? nextPlayer.isAI : true
+
   return {
     ...state,
     currentPlayerId: nextPlayer.id,
     phase: 'select_card',
-    selectedCard: null
+    selectedCard: null,
+    turnReady
   }
 }
 

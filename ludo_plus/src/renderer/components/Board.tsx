@@ -4,12 +4,12 @@ import type { Piece } from '../../shared/types'
 import './Board.css'
 
 export default function Board() {
-  const { state, movePiece, enterPiece, canMovePiece, canEnterPiece, humanPlayerId } = useGame()
+  const { state, movePiece, enterPiece, canMovePiece, canEnterPiece } = useGame()
 
-  const humanPlayer = state.players.find(p => p.id === humanPlayerId)
-  const humanPieces = state.pieces.filter(p => p.playerId === humanPlayerId)
-  const openPieces = humanPieces.filter(p => p.position !== null && !p.isFinished).length
-  const finishedPieces = humanPieces.filter(p => p.isFinished).length
+  const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
+  const currentPieces = state.pieces.filter(p => p.playerId === state.currentPlayerId)
+  const openPieces = currentPieces.filter(p => p.position !== null && !p.isFinished).length
+  const finishedPieces = currentPieces.filter(p => p.isFinished).length
 
   const getPiecesAtCell = (row: number, col: number): Piece[] => {
     return state.pieces.filter(
@@ -18,6 +18,7 @@ export default function Board() {
   }
 
   const handlePieceClick = (piece: Piece) => {
+    if (!state.turnReady) return
     if (piece.playerId !== state.currentPlayerId) return
     if (state.phase !== 'select_action') return
 
@@ -35,6 +36,7 @@ export default function Board() {
       <div className="pieces-container">
         {pieces.map((piece, idx) => {
           const isSelectable =
+            state.turnReady &&
             state.phase === 'select_action' &&
             piece.playerId === state.currentPlayerId &&
             (canMovePiece(piece.id) || canEnterPiece(piece.id))

@@ -3,36 +3,37 @@ import type { Piece } from '../../shared/types'
 import './PlayerHome.css'
 
 export default function PlayerHome() {
-  const { state, enterPiece, canEnterPiece, humanPlayerId } = useGame()
+  const { state, enterPiece, canEnterPiece } = useGame()
 
-  const humanPlayer = state.players.find(p => p.id === humanPlayerId)
-  const isMyTurn = state.currentPlayerId === humanPlayerId
+  const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
 
-  // Get human's pieces at home (not on board, not finished)
+  // Get current player's pieces at home (not on board, not finished)
   const homePieces = state.pieces.filter(
-    p => p.playerId === humanPlayerId && p.position === null && !p.isFinished
+    p => p.playerId === state.currentPlayerId && p.position === null && !p.isFinished
   )
 
   const finishedCount = state.pieces.filter(
-    p => p.playerId === humanPlayerId && p.isFinished
+    p => p.playerId === state.currentPlayerId && p.isFinished
   ).length
 
   const handlePieceClick = (piece: Piece) => {
-    if (!isMyTurn || state.phase !== 'select_action') return
+    if (!state.turnReady || state.phase !== 'select_action') return
     if (canEnterPiece(piece.id)) {
       enterPiece(piece.id)
     }
   }
 
+  const title = state.isHotseat ? `${currentPlayer?.name}'s Pieces` : 'Your Pieces'
+
   return (
     <div className="player-home">
-      <h3>Your Pieces</h3>
+      <h3>{title}</h3>
       <div className="home-pieces">
         <div className="home-section">
           <span className="label">At Home</span>
           <div className="pieces-row">
             {homePieces.map(piece => {
-              const canEnter = isMyTurn && state.phase === 'select_action' && canEnterPiece(piece.id)
+              const canEnter = state.turnReady && state.phase === 'select_action' && canEnterPiece(piece.id)
               return (
                 <div
                   key={piece.id}
@@ -48,7 +49,7 @@ export default function PlayerHome() {
           <span className="label">Finished</span>
           <div className="pieces-row">
             {Array.from({ length: finishedCount }).map((_, i) => (
-              <div key={i} className={`home-piece piece-${humanPlayer?.color} finished`} />
+              <div key={i} className={`home-piece piece-${currentPlayer?.color} finished`} />
             ))}
             {finishedCount === 0 && <span className="empty">—</span>}
           </div>

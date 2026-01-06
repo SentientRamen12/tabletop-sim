@@ -9,11 +9,11 @@ interface GameContextType {
   enterPiece: (pieceId: string) => void
   movePiece: (pieceId: string) => void
   skipTurn: () => void
-  resetGame: (playerCount?: number, humanColor?: PlayerColor) => void
+  startTurn: () => void
+  resetGame: (playerCount?: number, humanColor?: PlayerColor, isHotseat?: boolean) => void
   canEnterPiece: (pieceId: string) => boolean
   canMovePiece: (pieceId: string) => boolean
-  getHumanPlayerHand: () => Card[]
-  humanPlayerId: string
+  getCurrentPlayerHand: () => Card[]
 }
 
 const GameContext = createContext<GameContextType | null>(null)
@@ -22,16 +22,15 @@ interface GameProviderProps {
   children: ReactNode
   playerCount?: number
   humanColor?: PlayerColor
+  isHotseat?: boolean
 }
 
-export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: GameProviderProps) {
+export function GameProvider({ children, playerCount = 4, humanColor = 'red', isHotseat = false }: GameProviderProps) {
   const [state, dispatch] = useReducer(
     gameReducer,
-    { playerCount, humanColor },
-    (init) => createInitialState(init.playerCount, init.humanColor)
+    { playerCount, humanColor, isHotseat },
+    (init) => createInitialState(init.playerCount, init.humanColor, init.isHotseat)
   )
-
-  const humanPlayerId = 'player-0'
 
   const selectCard = useCallback((cardId: string) => {
     dispatch({ type: 'SELECT_CARD', cardId })
@@ -53,8 +52,12 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
     dispatch({ type: 'END_TURN' })
   }, [])
 
-  const resetGame = useCallback((count: number = 4, color: PlayerColor = 'red') => {
-    dispatch({ type: 'RESET_GAME', playerCount: count, humanColor: color })
+  const startTurn = useCallback(() => {
+    dispatch({ type: 'START_TURN' })
+  }, [])
+
+  const resetGame = useCallback((count: number = 4, color: PlayerColor = 'red', hotseat: boolean = false) => {
+    dispatch({ type: 'RESET_GAME', playerCount: count, humanColor: color, isHotseat: hotseat })
   }, [])
 
   const canEnterPiece = useCallback((pieceId: string) => {
@@ -65,15 +68,15 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
     return getValidMoves(state, pieceId).canMove
   }, [state])
 
-  const getHumanPlayerHand = useCallback(() => {
-    const hand = state.hands.find(h => h.playerId === humanPlayerId)
+  const getCurrentPlayerHand = useCallback(() => {
+    const hand = state.hands.find(h => h.playerId === state.currentPlayerId)
     return hand?.cards ?? []
   }, [state])
 
   // AI turn handling
   useEffect(() => {
     const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
-    if (!currentPlayer?.isAI || state.phase === 'game_over') return
+    if (!currentPlayer?.isAI || state.phase === 'game_over' || !state.turnReady) return
 
     const timeout = setTimeout(() => {
       // Simple AI: pick first valid action
@@ -118,7 +121,7 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
     }, 600)
 
     return () => clearTimeout(timeout)
-  }, [state.currentPlayerId, state.phase, state.selectedCard])
+  }, [state.currentPlayerId, state.phase, state.selectedCard, state.turnReady])
 
   return (
     <GameContext.Provider
@@ -129,11 +132,11 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red' }: 
         enterPiece,
         movePiece,
         skipTurn,
+        startTurn,
         resetGame,
         canEnterPiece,
         canMovePiece,
-        getHumanPlayerHand,
-        humanPlayerId
+        getCurrentPlayerHand
       }}
     >
       {children}

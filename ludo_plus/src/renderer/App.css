@@ -103,28 +103,33 @@ body {
 .color-green { background: #3a9679; }
 .color-yellow { background: #f9c74f; }
 
-.player-buttons {
+.player-buttons,
+.mode-buttons {
   display: flex;
   gap: 0.5rem;
 }
 
-.player-buttons button {
-  width: 48px;
+.player-buttons button,
+.mode-buttons button {
+  min-width: 48px;
   height: 48px;
+  padding: 0 1rem;
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   color: #eee;
-  font-size: 1.25rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.player-buttons button:hover {
+.player-buttons button:hover,
+.mode-buttons button:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.player-buttons button.selected {
+.player-buttons button.selected,
+.mode-buttons button.selected {
   background: #e94560;
   border-color: #e94560;
 }
