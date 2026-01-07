@@ -8,7 +8,7 @@ interface GameContextType {
   unselectCard: () => void
   enterPiece: (pieceId: string) => void
   movePiece: (pieceId: string) => void
-  skipTurn: () => void
+  refreshHand: () => void
   startTurn: () => void
   resetGame: (playerCount?: number, humanColor?: PlayerColor, isHotseat?: boolean) => void
   canEnterPiece: (pieceId: string) => boolean
@@ -48,8 +48,8 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
     dispatch({ type: 'MOVE_PIECE', pieceId })
   }, [])
 
-  const skipTurn = useCallback(() => {
-    dispatch({ type: 'END_TURN' })
+  const refreshHand = useCallback(() => {
+    dispatch({ type: 'REFRESH_HAND' })
   }, [])
 
   const startTurn = useCallback(() => {
@@ -82,7 +82,7 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
       // Simple AI: pick first valid action
       const hand = state.hands.find(h => h.playerId === state.currentPlayerId)
       if (!hand || hand.cards.length === 0) {
-        dispatch({ type: 'END_TURN' })
+        dispatch({ type: 'REFRESH_HAND' })
         return
       }
 
@@ -115,8 +115,8 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
           }
         }
 
-        // No valid moves, skip turn
-        dispatch({ type: 'END_TURN' })
+        // No valid moves, refresh hand
+        dispatch({ type: 'REFRESH_HAND' })
       }
     }, 600)
 
@@ -131,7 +131,7 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
         unselectCard,
         enterPiece,
         movePiece,
-        skipTurn,
+        refreshHand,
         startTurn,
         resetGame,
         canEnterPiece,

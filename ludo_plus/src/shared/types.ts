@@ -37,7 +37,7 @@ export interface LogEntry {
   id: string
   playerName: string
   playerColor: PlayerColor
-  action: 'moved' | 'entered' | 'captured' | 'finished' | 'skipped'
+  action: 'moved' | 'entered' | 'captured' | 'finished' | 'skipped' | 'refreshed'
   cardValue?: number
   targetPlayer?: string
 }
@@ -62,4 +62,5 @@ export type GameAction =
   | { type: 'ENTER_PIECE'; pieceId: string }
   | { type: 'END_TURN' }
   | { type: 'START_TURN' }
+  | { type: 'REFRESH_HAND' }
   | { type: 'RESET_GAME'; playerCount: number; humanColor: PlayerColor; isHotseat: boolean }

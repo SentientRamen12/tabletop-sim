@@ -6,7 +6,7 @@ interface GameStatusProps {
 }
 
 export default function GameStatus({ onExit }: GameStatusProps) {
-  const { state, skipTurn } = useGame()
+  const { state, refreshHand } = useGame()
 
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
 
@@ -56,9 +56,9 @@ export default function GameStatus({ onExit }: GameStatusProps) {
           )
         })}
       </div>
-      {currentPlayer && !currentPlayer.isAI && state.phase === 'select_action' && (
-        <button className="skip-btn" onClick={skipTurn}>
-          Skip Turn
+      {currentPlayer && !currentPlayer.isAI && state.turnReady && (
+        <button className="refresh-btn" onClick={refreshHand}>
+          Refresh Hand
         </button>
       )}
       <button className="exit-btn" onClick={onExit}>

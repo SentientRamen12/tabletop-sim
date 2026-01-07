@@ -1,5 +1,5 @@
 import type { GameState, GameAction, Player, Piece, PlayerColor, LogEntry } from '../../shared/types'
-import { createPlayerHand, playCard, drawCard, getCardById } from './deck'
+import { createPlayerHand, playCard, drawCard, getCardById, refreshHand } from './deck'
 import {
   ENTRY_POSITIONS,
   TOTAL_PATH_LENGTH,
@@ -272,6 +272,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         turnReady: true
       }
+    }
+
+    case 'REFRESH_HAND': {
+      const player = state.players.find(p => p.id === state.currentPlayerId)
+      if (!player) return state
+
+      let hand = state.hands.find(h => h.playerId === state.currentPlayerId)
+      if (!hand) return state
+
+      hand = refreshHand(hand)
+
+      const newHands = state.hands.map(h =>
+        h.playerId === state.currentPlayerId ? hand : h
+      )
+
+      const logEntry = createLogEntry(player, 'refreshed')
+
+      return endTurn({
+        ...state,
+        hands: newHands,
+        selectedCard: null,
+        log: [...state.log, logEntry]
+      })
     }
 
     case 'RESET_GAME': {

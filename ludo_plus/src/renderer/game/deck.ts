@@ -94,3 +94,19 @@ export function playCard(hand: PlayerHand, cardId: string): PlayerHand {
 export function getCardById(hand: PlayerHand, cardId: string): Card | undefined {
   return hand.cards.find(c => c.id === cardId)
 }
+
+export function refreshHand(hand: PlayerHand): PlayerHand {
+  // Discard all current cards
+  let newHand: PlayerHand = {
+    ...hand,
+    cards: [],
+    discard: [...hand.discard, ...hand.cards]
+  }
+
+  // Draw HAND_SIZE new cards
+  for (let i = 0; i < HAND_SIZE; i++) {
+    newHand = drawCard(newHand)
+  }
+
+  return newHand
+}

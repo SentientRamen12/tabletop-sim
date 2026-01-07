@@ -8,7 +8,8 @@ const ACTION_LABELS: Record<LogEntry['action'], string> = {
   entered: 'Enter',
   finished: 'Goal',
   captured: 'Capture',
-  skipped: 'Skip'
+  skipped: 'Skip',
+  refreshed: 'Refresh'
 }
 
 export default function GameLog() {
