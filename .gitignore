@@ -29,3 +29,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Ideation/brainstorming (not tracked)
+ideation/
