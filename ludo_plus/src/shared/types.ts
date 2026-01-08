@@ -59,6 +59,9 @@ export interface LogEntry {
   cardValue?: number
   targetPlayer?: string
   supportType?: SupportType  // V2: which support was involved
+  // V2: Piece interaction details
+  pieceType?: 'hero' | SupportType  // The piece doing the action
+  targetPieceType?: 'hero' | SupportType  // The piece being affected
 }
 
 export type GamePhase =

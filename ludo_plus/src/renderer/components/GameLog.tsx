@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGame } from '../game/GameContext'
-import type { LogEntry } from '../../shared/types'
+import type { LogEntry, SupportType } from '../../shared/types'
 import './GameLog.css'
 
 const ACTION_LABELS: Record<LogEntry['action'], string> = {
@@ -18,6 +18,14 @@ const ACTION_LABELS: Record<LogEntry['action'], string> = {
   support_removed: 'Lost',
   ability_used: 'Ability',
   intercepted: 'Blocked'
+}
+
+const PIECE_LABELS: Record<'hero' | SupportType, string> = {
+  hero: '👑',
+  escort: '🛡️',
+  blocker: '🧱',
+  assassin: '🗡️',
+  pusher: '💨'
 }
 
 export default function GameLog() {
@@ -41,12 +49,23 @@ export default function GameLog() {
           state.log.map(entry => (
             <div key={entry.id} className={`log-entry log-${entry.playerColor}`}>
               <span className="log-player">{entry.playerName}</span>
+              {entry.pieceType && (
+                <span className="log-piece" title={entry.pieceType}>{PIECE_LABELS[entry.pieceType]}</span>
+              )}
               <span className="log-action">{ACTION_LABELS[entry.action]}</span>
               {entry.cardValue !== undefined && (
                 <span className="log-card">{entry.cardValue}</span>
               )}
-              {entry.targetPlayer && (
+              {entry.targetPieceType && (
+                <span className="log-target-piece" title={entry.targetPieceType}>
+                  → {PIECE_LABELS[entry.targetPieceType]}
+                </span>
+              )}
+              {entry.targetPlayer && !entry.targetPieceType && (
                 <span className="log-target">→ {entry.targetPlayer}</span>
+              )}
+              {entry.targetPlayer && entry.targetPieceType && (
+                <span className="log-target-owner">({entry.targetPlayer})</span>
               )}
             </div>
           ))

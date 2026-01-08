@@ -229,20 +229,25 @@
 .support-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
-.support-slot .support-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+.support-header .piece-emoji {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.hero-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: white;
-  background: #4a4a6a;
+  gap: 0.4rem;
+}
+
+.hero-header .piece-emoji {
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .support-slot .support-name {
@@ -258,16 +263,9 @@
 
 /* Support type accent colors */
 .support-escort { border-left-color: #4fc3f7; }
-.support-escort .support-icon { background: #4fc3f7; }
-
 .support-blocker { border-left-color: #ff7043; }
-.support-blocker .support-icon { background: #ff7043; }
-
 .support-assassin { border-left-color: #ab47bc; }
-.support-assassin .support-icon { background: #ab47bc; }
-
 .support-pusher { border-left-color: #66bb6a; }
-.support-pusher .support-icon { background: #66bb6a; }
 
 /* Summon button */
 .summon-btn {

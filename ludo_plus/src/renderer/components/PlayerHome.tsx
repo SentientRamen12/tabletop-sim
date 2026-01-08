@@ -4,12 +4,14 @@ import type { SupportType } from '../../shared/types'
 import { ALL_SUPPORT_TYPES, MAX_SUPPORTS_ON_FIELD } from '../../shared/types'
 import './PlayerHome.css'
 
-const SUPPORT_INFO: Record<SupportType, { name: string; icon: string; description: string }> = {
-  escort: { name: 'Escort', icon: 'E', description: 'Hero +1 move when adjacent' },
-  blocker: { name: 'Blocker', icon: 'B', description: 'Intercepts enemies passing through' },
-  assassin: { name: 'Assassin', icon: 'A', description: '+2 movement, dies after capture' },
-  pusher: { name: 'Pusher', icon: 'P', description: 'Push adjacent piece 1 space' }
+const SUPPORT_INFO: Record<SupportType, { name: string; emoji: string; description: string }> = {
+  escort: { name: 'Escort', emoji: '🛡️', description: 'Hero +1 move when adjacent' },
+  blocker: { name: 'Blocker', emoji: '🧱', description: 'Intercepts enemies passing through' },
+  assassin: { name: 'Assassin', emoji: '🗡️', description: '+2 movement, dies after capture' },
+  pusher: { name: 'Pusher', emoji: '💨', description: 'Push adjacent piece 1 space' }
 }
+
+const HERO_EMOJI = '👑'
 
 export default function PlayerHome() {
   const {
@@ -126,7 +128,10 @@ export default function PlayerHome() {
 
       {/* Hero Section - Hero is ALWAYS on board */}
       <div className="home-section hero-section">
-        <span className="label">Hero</span>
+        <div className="hero-header">
+          <span className="piece-emoji hero-emoji">{HERO_EMOJI}</span>
+          <span className="label">Hero</span>
+        </div>
         <div className="hero-status">
           {heroStatus === 'board' && (
             <span className="status-text on-board">On Board</span>
@@ -161,29 +166,29 @@ export default function PlayerHome() {
             const { canSummon: canSum, canUsePortal } = canSummon(type)
             const canSummonNow = state.turnReady && state.phase === 'select_action' && canSum
 
-            return (
-              <div
-                key={type}
-                className={`support-slot support-${type} ${isDeployed ? 'deployed' : ''} ${!isAvailable && !isDeployed ? 'unavailable' : ''}`}
-              >
-                <div className="support-header">
-                  <span className="support-icon">{info.icon}</span>
-                  <span className="support-name">{info.name}</span>
+              return (
+                <div
+                  key={type}
+                  className={`support-slot support-${type} ${isDeployed ? 'deployed' : ''} ${!isAvailable && !isDeployed ? 'unavailable' : ''}`}
+                >
+                  <div className="support-header">
+                    <span className="piece-emoji">{info.emoji}</span>
+                    <span className="support-name">{info.name}</span>
+                  </div>
+                  <span className="support-status">
+                    {isDeployed ? 'On Field' : isAvailable ? 'Ready' : 'Lost'}
+                  </span>
+                  {isAvailable && !isDeployed && (
+                    <button
+                      className={`summon-btn ${canSummonNow ? 'active' : ''}`}
+                      disabled={!canSummonNow}
+                      onClick={() => handleSummonClick(type)}
+                    >
+                      Summon
+                    </button>
+                  )}
                 </div>
-                <span className="support-status">
-                  {isDeployed ? 'On Field' : isAvailable ? 'Ready' : 'Lost'}
-                </span>
-                {isAvailable && !isDeployed && (
-                  <button
-                    className={`summon-btn ${canSummonNow ? 'active' : ''}`}
-                    disabled={!canSummonNow}
-                    onClick={() => handleSummonClick(type)}
-                  >
-                    Summon
-                  </button>
-                )}
-              </div>
-            )
+              )
           })}
         </div>
       </div>

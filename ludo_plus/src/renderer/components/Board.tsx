@@ -3,12 +3,13 @@ import { BOARD_SIZE, getCellType, getEntryColor, getSpiralArrows, positionsEqual
 import type { Piece, PlayerColor, SupportType } from '../../shared/types'
 import './Board.css'
 
-// Support type icons
-const SUPPORT_ICONS: Record<SupportType, string> = {
-  escort: 'E',
-  blocker: 'B',
-  assassin: 'A',
-  pusher: 'P'
+// Piece emojis
+const PIECE_EMOJIS: Record<'hero' | SupportType, string> = {
+  hero: '👑',
+  escort: '🛡️',
+  blocker: '🧱',
+  assassin: '🗡️',
+  pusher: '💨'
 }
 
 export default function Board() {
@@ -88,15 +89,15 @@ export default function Board() {
     const typeClass = piece.supportType ? `piece-${piece.supportType}` : ''
     const pushTargetClass = isPushTarget ? 'push-target' : ''
 
+    const emoji = piece.kind === 'hero' ? PIECE_EMOJIS.hero : PIECE_EMOJIS[piece.supportType!]
+
     return (
       <div
         key={piece.id}
         className={`piece piece-${piece.color} ${kindClass} ${typeClass} ${pushTargetClass} ${isSelectable ? 'selectable' : ''}`}
         onClick={() => handlePieceClick(piece)}
       >
-        {piece.kind === 'support' && piece.supportType && (
-          <span className="support-icon">{SUPPORT_ICONS[piece.supportType]}</span>
-        )}
+        <span className="piece-emoji">{emoji}</span>
       </div>
     )
   }

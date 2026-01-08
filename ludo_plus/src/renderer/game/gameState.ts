@@ -131,7 +131,10 @@ function calculateMove(
                               pieceAtTarget.supportType === 'pusher' && 
                               movingPiece.kind !== 'hero'
 
-    if (isOwnPiece || isProtectedBySafe || isProtectedByStart || isPusherProtected) {
+    // Pusher cannot capture any piece (can only push, not capture by moving)
+    const isPusherMoving = movingPiece.kind === 'support' && movingPiece.supportType === 'pusher'
+
+    if (isOwnPiece || isProtectedBySafe || isProtectedByStart || isPusherProtected || isPusherMoving) {
       // Blocked: can't land here
       return { finalIndex: startIndex, capturedPieceId: null, blocked: true, intercepted: false, interceptedBy: null, assassinDies: false }
     }
@@ -216,18 +219,24 @@ let logIdCounter = 0
 function createLogEntry(
   player: Player,
   action: LogEntry['action'],
-  cardValue?: number,
-  targetPlayer?: string,
-  supportType?: SupportType
+  opts?: {
+    cardValue?: number
+    targetPlayer?: string
+    supportType?: SupportType
+    pieceType?: 'hero' | SupportType
+    targetPieceType?: 'hero' | SupportType
+  }
 ): LogEntry {
   return {
     id: `log-${++logIdCounter}`,
     playerName: player.name,
     playerColor: player.color,
     action,
-    cardValue,
-    targetPlayer,
-    supportType
+    cardValue: opts?.cardValue,
+    targetPlayer: opts?.targetPlayer,
+    supportType: opts?.supportType,
+    pieceType: opts?.pieceType,
+    targetPieceType: opts?.targetPieceType
   }
 }
 
@@ -318,7 +327,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         h.playerId === state.currentPlayerId ? hand : h
       )
 
-      const logEntry = createLogEntry(player, 'entered', state.selectedCard.value)
+      const logEntry = createLogEntry(player, 'entered', { 
+        cardValue: state.selectedCard.value, 
+        pieceType: piece.kind === 'hero' ? 'hero' : piece.supportType 
+      })
 
       return endTurn({
         ...state,
@@ -381,8 +393,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           )
         }
 
-        newLog.push(createLogEntry(player, 'intercepted', steps, blockerOwner?.name))
-        newLog.push(createLogEntry(blockerOwner!, 'support_removed', undefined, undefined, 'blocker'))
+        const movingPieceType = piece.kind === 'hero' ? 'hero' : piece.supportType
+        newLog.push(createLogEntry(player, 'intercepted', { 
+          cardValue: steps, 
+          targetPlayer: blockerOwner?.name,
+          pieceType: movingPieceType,
+          targetPieceType: 'blocker'
+        }))
+        newLog.push(createLogEntry(blockerOwner!, 'support_removed', { supportType: 'blocker', pieceType: 'blocker' }))
 
         let hand = state.hands.find(h => h.playerId === state.currentPlayerId)!
         hand = playCard(hand, state.selectedCard.id)
@@ -419,6 +437,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           // V2 Capture matrix:
           // - Hero captured → respawns at start
           // - Support captured → removed (back to available pool)
+          const attackerPieceType = piece.kind === 'hero' ? 'hero' : piece.supportType
           if (capturedPiece.kind === 'hero') {
             // Hero respawns at start position (always on board)
             newPieces = newPieces.map(p =>
@@ -426,8 +445,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 ? { ...p, position: ENTRY_POSITIONS[capturedPiece.color], pathIndex: 0 }
                 : p
             )
-            newLog.push(createLogEntry(player, 'captured', undefined, capturedPlayer?.name))
-            newLog.push(createLogEntry(capturedPlayer!, 'hero_reset'))
+            newLog.push(createLogEntry(player, 'captured', { 
+              targetPlayer: capturedPlayer?.name,
+              pieceType: attackerPieceType,
+              targetPieceType: 'hero'
+            }))
+            newLog.push(createLogEntry(capturedPlayer!, 'hero_reset', { pieceType: 'hero' }))
           } else {
             // Remove support from pieces and update roster
             newPieces = newPieces.filter(p => p.id !== moveResult.capturedPieceId)
@@ -440,7 +463,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                   }
                 : roster
             )
-            newLog.push(createLogEntry(player, 'captured', undefined, capturedPlayer?.name, capturedPiece.supportType))
+            newLog.push(createLogEntry(player, 'captured', { 
+              targetPlayer: capturedPlayer?.name, 
+              supportType: capturedPiece.supportType,
+              pieceType: attackerPieceType,
+              targetPieceType: capturedPiece.supportType
+            }))
           }
         }
       }
@@ -457,7 +485,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
               }
             : roster
         )
-        newLog.push(createLogEntry(player, 'support_removed', undefined, undefined, 'assassin'))
+        newLog.push(createLogEntry(player, 'support_removed', { supportType: 'assassin', pieceType: 'assassin' }))
       } else if (supportReachesCenter) {
         // Support reaching center is removed (can't win)
         newPieces = newPieces.filter(p => p.id !== piece.id)
@@ -470,7 +498,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
               }
             : roster
         )
-        newLog.push(createLogEntry(player, 'support_removed', undefined, undefined, piece.supportType))
+        newLog.push(createLogEntry(player, 'support_removed', { supportType: piece.supportType, pieceType: piece.supportType }))
       } else {
         // Normal move - update piece position
         newPieces = newPieces.map(p =>
@@ -479,10 +507,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             : p
         )
 
+        const movedPieceType = piece.kind === 'hero' ? 'hero' : piece.supportType
         if (isFinishing) {
-          newLog.push(createLogEntry(player, 'finished', state.selectedCard.value))
+          newLog.push(createLogEntry(player, 'finished', { cardValue: state.selectedCard.value, pieceType: 'hero' }))
         } else {
-          newLog.push(createLogEntry(player, 'moved', state.selectedCard.value))
+          newLog.push(createLogEntry(player, 'moved', { cardValue: state.selectedCard.value, pieceType: movedPieceType }))
         }
       }
 
@@ -506,7 +535,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           if (!state.claimedSummons[player.color]) {
             // No existing portal - auto claim
             newClaimedSummons = { ...state.claimedSummons, [player.color]: newPos }
-            newLog.push(createLogEntry(player, 'claimed'))
+            newLog.push(createLogEntry(player, 'claimed', {}))
           } else {
             // Has existing portal - enter portal_choice phase
             pendingPortal = newPos
@@ -564,7 +593,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'END_TURN': {
       const player = state.players.find(p => p.id === state.currentPlayerId)
       if (player && state.phase === 'select_action') {
-        const logEntry = createLogEntry(player, 'skipped')
+        const logEntry = createLogEntry(player, 'skipped', {})
         return endTurn({
           ...state,
           log: [...state.log, logEntry]
@@ -598,7 +627,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         h.playerId === state.currentPlayerId ? hand : h
       )
 
-      const logEntry = createLogEntry(player, 'refreshed')
+      const logEntry = createLogEntry(player, 'refreshed', {})
 
       return endTurn({
         ...state,
@@ -615,7 +644,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!player) return state
 
       const newClaimedSummons = { ...state.claimedSummons, [player.color]: state.pendingPortal }
-      const newLog = [...state.log, createLogEntry(player, 'claimed')]
+      const newLog = [...state.log, createLogEntry(player, 'claimed', {})]
 
       return endTurn({
         ...state,
@@ -667,7 +696,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       newClaimedSummons[player.color] = action.position
 
       const targetPlayer = state.players.find(p => p.color === previousOwner)?.name
-      const newLog = [...state.log, createLogEntry(player, 'stole', undefined, targetPlayer)]
+      const stealingPieceType = pieceAtPos.kind === 'hero' ? 'hero' : pieceAtPos.supportType
+      const newLog = [...state.log, createLogEntry(player, 'stole', { targetPlayer, pieceType: stealingPieceType })]
 
       return endTurn({
         ...state,
@@ -710,7 +740,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let pathIndex: number
 
       if (canUsePortal && claimedSummonPos) {
-        // Portal summoning - stackable, no blocking check
+        // Portal summoning - stackable (no capture) but respect max pieces per cell
+        const piecesAtPortal = state.pieces.filter(
+          p => p.position && positionsEqual(p.position, claimedSummonPos) && !p.isFinished
+        )
+        if (piecesAtPortal.length >= MAX_PIECES_PER_CELL) return state
+
         const summonPathIndex = PLAYER_PATHS[player.color].findIndex(
           pos => positionsEqual(pos, claimedSummonPos)
         )
@@ -719,7 +754,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         entryPos = claimedSummonPos
         pathIndex = summonPathIndex
       } else {
-        // Default start entry - stackable, no blocking check
+        // Default start entry - stackable (no capture) but respect max pieces per cell
+        const piecesAtStart = state.pieces.filter(
+          p => p.position && positionsEqual(p.position, defaultEntryPos) && !p.isFinished
+        )
+        if (piecesAtStart.length >= MAX_PIECES_PER_CELL) return state
+
         entryPos = defaultEntryPos
         pathIndex = 0
       }
@@ -758,7 +798,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         h.playerId === state.currentPlayerId ? hand : h
       )
 
-      const logEntry = createLogEntry(player, 'summoned', state.selectedCard.value, undefined, action.supportType)
+      const logEntry = createLogEntry(player, 'summoned', { 
+        cardValue: state.selectedCard.value, 
+        supportType: action.supportType,
+        pieceType: action.supportType 
+      })
 
       return endTurn({
         ...state,
@@ -837,13 +881,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (!isAtOwnStart && !isPusherProtected) {
           // Pushed piece "captures" the piece at destination (pushed = attacker)
           const capturedPlayer = state.players.find(p => p.id === pieceAtDest.playerId)
+          const pushedPieceType = target.kind === 'hero' ? 'hero' : target.supportType
 
           if (pieceAtDest.kind === 'hero') {
             // Hero respawns at start position (always on board)
             newPieces = newPieces.map(p =>
               p.id === pieceAtDest.id ? { ...p, position: ENTRY_POSITIONS[pieceAtDest.color], pathIndex: 0 } : p
             )
-            newLog.push(createLogEntry(capturedPlayer!, 'hero_reset'))
+            newLog.push(createLogEntry(capturedPlayer!, 'hero_reset', { 
+              pieceType: 'hero',
+              targetPieceType: pushedPieceType  // pushed into by this
+            }))
           } else {
             // Support removed
             newPieces = newPieces.filter(p => p.id !== pieceAtDest.id)
@@ -856,6 +904,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                   }
                 : roster
             )
+            newLog.push(createLogEntry(capturedPlayer!, 'support_removed', { 
+              supportType: pieceAtDest.supportType,
+              pieceType: pieceAtDest.supportType,
+              targetPieceType: pushedPieceType  // pushed into by this
+            }))
           }
         }
         // If protected, piece just stacks (no capture)
@@ -869,7 +922,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             p.id === target.id ? { ...p, position: pushDest, isFinished: true } : p
           )
 
-          newLog.push(createLogEntry(player, 'ability_used', undefined, undefined, 'pusher'))
+          const targetOwner = state.players.find(p => p.id === target.playerId)
+          newLog.push(createLogEntry(player, 'ability_used', { 
+            supportType: 'pusher', 
+            pieceType: 'pusher',
+            targetPlayer: targetOwner?.name,
+            targetPieceType: 'hero'
+          }))
 
           return {
             ...state,
@@ -909,7 +968,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         )
       }
 
-      newLog.push(createLogEntry(player, 'ability_used', undefined, undefined, 'pusher'))
+      const targetOwner = state.players.find(p => p.id === target.playerId)
+      const pushedPieceType = target.kind === 'hero' ? 'hero' : target.supportType
+      newLog.push(createLogEntry(player, 'ability_used', { 
+        supportType: 'pusher', 
+        pieceType: 'pusher',
+        targetPlayer: targetOwner?.name,
+        targetPieceType: pushedPieceType
+      }))
 
       // FREE action: return to select_action, don't consume card, don't end turn
       return {
@@ -1063,11 +1129,24 @@ export function canSummonSupport(state: GameState, supportType: SupportType): {
   if (!roster.available.includes(supportType)) return { canSummon: false, canUsePortal: false }
   if (roster.onField.length >= MAX_SUPPORTS_ON_FIELD) return { canSummon: false, canUsePortal: false }
 
-  // Start is always available for summoning (stackable)
-  const canEnterStart = true
+  // Check start position - stackable but respect max pieces per cell
+  const defaultEntryPos = ENTRY_POSITIONS[player.color]
+  const piecesAtStart = state.pieces.filter(
+    p => p.position && positionsEqual(p.position, defaultEntryPos) && !p.isFinished
+  )
+  const canEnterStart = piecesAtStart.length < MAX_PIECES_PER_CELL
 
-  // Portal entry requires card 3+ and having claimed a portal (stackable)
-  const canUsePortal = state.selectedCard.value >= 3 && !!state.claimedSummons[player.color]
+  // Check portal - stackable but respect max pieces per cell
+  let canUsePortal = false
+  if (state.selectedCard.value >= 3) {
+    const claimedSummonPos = state.claimedSummons[player.color]
+    if (claimedSummonPos) {
+      const piecesAtPortal = state.pieces.filter(
+        p => p.position && positionsEqual(p.position, claimedSummonPos) && !p.isFinished
+      )
+      canUsePortal = piecesAtPortal.length < MAX_PIECES_PER_CELL
+    }
+  }
 
   return {
     canSummon: canEnterStart || canUsePortal,
