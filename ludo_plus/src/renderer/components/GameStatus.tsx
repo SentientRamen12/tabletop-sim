@@ -72,12 +72,16 @@ export default function GameStatus({ onExit }: GameStatusProps) {
           )
         })}
       </div>
-      {currentPlayer && !currentPlayer.isAI && state.turnReady && state.phase === 'select_action' && stealable.length > 0 && (
+      {/* These actions don't require card selection - work during select_card or select_action */}
+      {currentPlayer && !currentPlayer.isAI && state.turnReady && 
+       (state.phase === 'select_card' || state.phase === 'select_action') && 
+       stealable.length > 0 && (
         <button className="steal-btn" onClick={() => stealPortal(stealable[0].position)}>
           Claim Portal
         </button>
       )}
-      {currentPlayer && !currentPlayer.isAI && state.turnReady && state.phase === 'select_action' && (
+      {currentPlayer && !currentPlayer.isAI && state.turnReady && 
+       (state.phase === 'select_card' || state.phase === 'select_action') && (
         <button className="refresh-btn" onClick={refreshHand}>
           Refresh Hand
         </button>

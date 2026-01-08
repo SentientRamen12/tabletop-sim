@@ -581,7 +581,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
     }
 
+    // Refresh hand - doesn't require card selection
     case 'REFRESH_HAND': {
+      // Allow during select_card OR select_action (no card required)
+      if (state.phase !== 'select_card' && state.phase !== 'select_action') return state
+
       const player = state.players.find(p => p.id === state.currentPlayerId)
       if (!player) return state
 
@@ -630,8 +634,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       })
     }
 
+    // Steal portal - doesn't require card selection
     case 'STEAL_PORTAL': {
-      if (state.phase !== 'select_action') return state
+      // Allow during select_card OR select_action (no card required)
+      if (state.phase !== 'select_card' && state.phase !== 'select_action') return state
 
       const player = state.players.find(p => p.id === state.currentPlayerId)
       if (!player) return state
@@ -1004,7 +1010,8 @@ export function getValidMoves(state: GameState, pieceId: string): {
  * Get positions where player can claim a portal (piece on portal but piece color ≠ portal color)
  */
 export function getStealablePortals(state: GameState): { position: Position; ownerColor: PlayerColor }[] {
-  if (state.phase !== 'select_action') return []
+  // Allow during select_card OR select_action (no card required to steal)
+  if (state.phase !== 'select_card' && state.phase !== 'select_action') return []
   
   const player = state.players.find(p => p.id === state.currentPlayerId)
   if (!player) return []
