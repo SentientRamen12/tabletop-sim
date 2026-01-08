@@ -163,13 +163,13 @@ export function createInitialState(playerCount: number = 4, humanColor: PlayerCo
     isAI: isHotseat ? false : idx > 0
   }))
 
-  // V2: Create 1 hero per player (supports are summoned during game)
+  // V2: Create 1 hero per player - hero ALWAYS starts on the board at entry position
   const pieces: Piece[] = players.map(player => ({
     id: `${player.id}-hero`,
     playerId: player.id,
     color: player.color,
-    position: null,
-    pathIndex: -1,
+    position: ENTRY_POSITIONS[player.color],  // Hero starts on board
+    pathIndex: 0,  // At start of path
     isFinished: false,
     kind: 'hero' as const
   }))

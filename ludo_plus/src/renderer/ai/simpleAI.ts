@@ -7,13 +7,12 @@ import { areAdjacent } from '../game/board'
  * V2 AI Strategy: Hero-first approach
  * Priority:
  * 0. Use Pusher ability FIRST (it's FREE, once per turn)
- * 1. Move hero toward center if safe
- * 2. Enter hero from home
- * 3. Move Escort to stay adjacent to hero
- * 4. Summon supports when beneficial
- * 5. Move Assassin aggressively
- * 6. Move other supports
- * 7. Refresh hand as fallback
+ * 1. Move hero toward center (hero is ALWAYS on board)
+ * 2. Move Escort to stay adjacent to hero
+ * 3. Summon supports when beneficial
+ * 4. Move Assassin aggressively
+ * 5. Move other supports
+ * 6. Refresh hand as fallback
  */
 export function getAIAction(state: GameState): GameAction | null {
   const hand = state.hands.find(h => h.playerId === state.currentPlayerId)
@@ -58,26 +57,15 @@ export function getAIAction(state: GameState): GameAction | null {
       }
     }
 
-    // Priority 1: Move hero if on board
-    if (hero?.position) {
+    // Priority 1: Move hero (hero is ALWAYS on board)
+    if (hero) {
       const { canMove } = getValidMoves(state, hero.id)
       if (canMove) {
         return { type: 'MOVE_PIECE', pieceId: hero.id }
       }
     }
 
-    // Priority 2: Enter hero from home
-    if (hero && !hero.position) {
-      const { canEnterStart, canEnterPortal } = getValidMoves(state, hero.id)
-      if (canEnterPortal) {
-        return { type: 'ENTER_PIECE', pieceId: hero.id, usePortal: true }
-      }
-      if (canEnterStart) {
-        return { type: 'ENTER_PIECE', pieceId: hero.id, usePortal: false }
-      }
-    }
-
-    // Priority 3: Move Escort to stay adjacent to hero
+    // Priority 2: Move Escort to stay adjacent to hero
     const escort = supports.find(s => s.supportType === 'escort' && s.position)
     if (escort?.position && hero?.position) {
       if (!areAdjacent(escort.position, hero.position)) {
@@ -88,7 +76,7 @@ export function getAIAction(state: GameState): GameAction | null {
       }
     }
 
-    // Priority 4: Summon supports if beneficial
+    // Priority 3: Summon supports if beneficial
     if (roster && roster.onField.length < MAX_SUPPORTS_ON_FIELD) {
       // Prefer Escort if hero is on board and no escort deployed
       if (hero?.position && roster.available.includes('escort')) {
@@ -123,7 +111,7 @@ export function getAIAction(state: GameState): GameAction | null {
       }
     }
 
-    // Priority 5: Move Assassin aggressively
+    // Priority 4: Move Assassin aggressively
     const assassin = supports.find(s => s.supportType === 'assassin' && s.position)
     if (assassin) {
       const { canMove } = getValidMoves(state, assassin.id)
@@ -132,7 +120,7 @@ export function getAIAction(state: GameState): GameAction | null {
       }
     }
 
-    // Priority 6: Move any other support
+    // Priority 5: Move any other support
     for (const support of supports) {
       if (support.position) {
         const { canMove } = getValidMoves(state, support.id)
@@ -142,7 +130,7 @@ export function getAIAction(state: GameState): GameAction | null {
       }
     }
 
-    // Priority 7: Refresh hand as fallback
+    // Priority 6: Refresh hand as fallback
     return { type: 'REFRESH_HAND' }
   }
 
