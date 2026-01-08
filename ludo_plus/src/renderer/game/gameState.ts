@@ -72,6 +72,7 @@ function calculateMove(
   }
 
   // V2: Check for Blocker intercepts along the path (not at destination)
+  // When intercepted: BLOCKER dies, moving piece STOPS at blocker's position (not captured)
   for (let step = 1; step < effectiveSteps; step++) {
     const intermediateIndex = startIndex + step
     const intermediatePos = getPositionForPlayer(color, intermediateIndex)
@@ -87,10 +88,10 @@ function calculateMove(
     )
 
     if (blocker) {
-      // Intercepted! Moving piece is captured at Blocker's position
+      // Intercepted! BLOCKER dies, moving piece stops at blocker's position
       return {
         finalIndex: intermediateIndex,
-        capturedPieceId: movingPiece.id, // Moving piece gets captured
+        capturedPieceId: blocker.id, // BLOCKER gets killed (not the moving piece)
         blocked: false,
         intercepted: true,
         interceptedBy: blocker.id,
@@ -351,38 +352,37 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let newSupportRosters = [...state.supportRosters]
       const newLog = [...state.log]
 
-      // V2: Handle Blocker intercept - moving piece is captured
+      // V2: Handle Blocker intercept - BLOCKER dies, moving piece STOPS at blocker position
       if (moveResult.intercepted) {
-        const blockerOwner = state.players.find(p => {
-          const blocker = state.pieces.find(bl => bl.id === moveResult.interceptedBy)
-          return blocker && blocker.playerId === p.id
-        })
+        const blocker = state.pieces.find(bl => bl.id === moveResult.interceptedBy)
+        const blockerOwner = state.players.find(p => blocker && blocker.playerId === p.id)
 
-        // Apply V2 capture matrix to the intercepted piece
-        if (piece.kind === 'hero') {
-          // Hero respawns at start position (always on board)
-          newPieces = newPieces.map(p =>
-            p.id === piece.id
-              ? { ...p, position: ENTRY_POSITIONS[piece.color], pathIndex: 0 }
-              : p
-          )
-          newLog.push(createLogEntry(player, 'intercepted', steps, blockerOwner?.name))
-          newLog.push(createLogEntry(player, 'hero_reset'))
-        } else {
-          // Support is removed - remove from pieces and update roster
-          newPieces = newPieces.filter(p => p.id !== piece.id)
+        // Remove the blocker (it dies on intercept)
+        newPieces = newPieces.filter(p => p.id !== moveResult.interceptedBy)
+        if (blocker) {
           newSupportRosters = newSupportRosters.map(roster =>
-            roster.playerId === piece.playerId
+            roster.playerId === blocker.playerId
               ? {
                   ...roster,
-                  onField: roster.onField.filter(id => id !== piece.id),
-                  available: [...roster.available, piece.supportType!]
+                  onField: roster.onField.filter(id => id !== blocker.id),
+                  available: [...roster.available, 'blocker']
                 }
               : roster
           )
-          newLog.push(createLogEntry(player, 'intercepted', steps, blockerOwner?.name, piece.supportType))
-          newLog.push(createLogEntry(player, 'support_removed', undefined, undefined, piece.supportType))
         }
+
+        // Move the intercepted piece to the blocker's former position (it STOPS there, not captured)
+        const stopPos = getPositionForPlayer(player.color, moveResult.finalIndex)
+        if (stopPos) {
+          newPieces = newPieces.map(p =>
+            p.id === piece.id
+              ? { ...p, position: stopPos, pathIndex: moveResult.finalIndex }
+              : p
+          )
+        }
+
+        newLog.push(createLogEntry(player, 'intercepted', steps, blockerOwner?.name))
+        newLog.push(createLogEntry(blockerOwner!, 'support_removed', undefined, undefined, 'blocker'))
 
         let hand = state.hands.find(h => h.playerId === state.currentPlayerId)!
         hand = playCard(hand, state.selectedCard.id)
