@@ -18,7 +18,8 @@ export default function PlayerHome() {
     canSummon,
     activatePusher,
     cancelAbility,
-    getCurrentRoster
+    getCurrentRoster,
+    getPushTargets
   } = useGame()
 
   const [showSummonChoice, setShowSummonChoice] = useState<SupportType | null>(null)
@@ -39,6 +40,9 @@ export default function PlayerHome() {
         p.supportType === 'pusher' &&
         p.position !== null
   )
+
+  // Check if pusher has valid targets (for showing ability button)
+  const pusherHasTargets = pusherOnField ? getPushTargets(pusherOnField.id).length > 0 : false
 
   const handleSummonClick = (supportType: SupportType) => {
     if (!state.turnReady || state.phase !== 'select_action') return
@@ -61,7 +65,12 @@ export default function PlayerHome() {
   }
 
   const handlePusherAbility = () => {
-    if (pusherOnField && state.phase === 'select_action' && !state.pusherUsedThisTurn) {
+    // Pusher ability can be used during select_card OR select_action (no card required)
+    const canUse = pusherOnField && 
+      (state.phase === 'select_card' || state.phase === 'select_action') && 
+      !state.pusherUsedThisTurn &&
+      pusherHasTargets
+    if (canUse) {
       activatePusher(pusherOnField.id)
     }
   }
@@ -179,8 +188,11 @@ export default function PlayerHome() {
         </div>
       </div>
 
-      {/* Pusher Ability Button - FREE action, once per turn */}
-      {pusherOnField && state.phase === 'select_action' && !state.pusherUsedThisTurn && (
+      {/* Pusher Ability Button - FREE action, once per turn, no card required */}
+      {pusherOnField && 
+       (state.phase === 'select_card' || state.phase === 'select_action') && 
+       !state.pusherUsedThisTurn && 
+       pusherHasTargets && (
         <div className="home-section ability-section">
           <button className="ability-btn pusher-ability" onClick={handlePusherAbility}>
             Use Pusher Ability (Free)

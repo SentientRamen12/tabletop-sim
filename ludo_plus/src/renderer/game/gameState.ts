@@ -351,10 +351,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
         // Apply V2 capture matrix to the intercepted piece
         if (piece.kind === 'hero') {
-          // Hero resets to start
+          // Hero respawns at start position (always on board)
           newPieces = newPieces.map(p =>
             p.id === piece.id
-              ? { ...p, position: null, pathIndex: -1 }
+              ? { ...p, position: ENTRY_POSITIONS[piece.color], pathIndex: 0 }
               : p
           )
           newLog.push(createLogEntry(player, 'intercepted', steps, blockerOwner?.name))
@@ -408,12 +408,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           capturedPlayer = state.players.find(p => p.id === capturedPiece.playerId)
 
           // V2 Capture matrix:
-          // - Hero captured → reset to start
+          // - Hero captured → respawns at start
           // - Support captured → removed (back to available pool)
           if (capturedPiece.kind === 'hero') {
+            // Hero respawns at start position (always on board)
             newPieces = newPieces.map(p =>
               p.id === moveResult.capturedPieceId
-                ? { ...p, position: null, pathIndex: -1 }
+                ? { ...p, position: ENTRY_POSITIONS[capturedPiece.color], pathIndex: 0 }
                 : p
             )
             newLog.push(createLogEntry(player, 'captured', undefined, capturedPlayer?.name))
@@ -753,14 +754,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     // V2: Pusher ability - enter targeting mode
     // Pusher ability is FREE (doesn't consume card or end turn) but once per turn
+    // Can activate without card selection, but only if valid targets exist
     case 'ACTIVATE_PUSHER': {
-      if (state.phase !== 'select_action') return state
+      // Allow during select_card OR select_action (no card required)
+      if (state.phase !== 'select_card' && state.phase !== 'select_action') return state
       if (state.pusherUsedThisTurn) return state  // Already used this turn
 
       const piece = state.pieces.find(p => p.id === action.pieceId)
       if (!piece || piece.playerId !== state.currentPlayerId) return state
       if (piece.kind !== 'support' || piece.supportType !== 'pusher') return state
       if (!piece.position) return state
+
+      // Only allow if there are valid push targets
+      const targets = getPushTargets(state, piece.id)
+      if (targets.length === 0) return state
 
       return {
         ...state,
@@ -805,9 +812,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         const capturedPlayer = state.players.find(p => p.id === pieceAtDest.playerId)
 
         if (pieceAtDest.kind === 'hero') {
-          // Hero resets
+          // Hero respawns at start position (always on board)
           newPieces = newPieces.map(p =>
-            p.id === pieceAtDest.id ? { ...p, position: null, pathIndex: -1 } : p
+            p.id === pieceAtDest.id ? { ...p, position: ENTRY_POSITIONS[pieceAtDest.color], pathIndex: 0 } : p
           )
           newLog.push(createLogEntry(capturedPlayer!, 'hero_reset'))
         } else {
@@ -891,9 +898,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CANCEL_ABILITY': {
       if (state.phase !== 'select_push_target') return state
 
+      // Return to correct phase based on whether card was selected
       return {
         ...state,
-        phase: 'select_action',
+        phase: state.selectedCard ? 'select_action' : 'select_card',
         selectedPieceForAbility: null
       }
     }

@@ -35,7 +35,7 @@ interface GameContextType {
   executePush: (targetPieceId: string) => void
   cancelAbility: () => void
   canSummon: (supportType: SupportType) => { canSummon: boolean; canUsePortal: boolean }
-  getPushTargets: () => Piece[]
+  getPushTargets: (pieceId?: string) => Piece[]
   getEffectiveMoveDistance: (pieceId: string) => number
   getCurrentRoster: () => ReturnType<typeof getCurrentRoster>
 }
@@ -138,9 +138,10 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
     return canSummonSupport(state, supportType)
   }, [state])
 
-  const getPushTargetsCallback = useCallback(() => {
-    if (!state.selectedPieceForAbility) return []
-    return getPushTargets(state, state.selectedPieceForAbility)
+  const getPushTargetsCallback = useCallback((pieceId?: string) => {
+    const id = pieceId ?? state.selectedPieceForAbility
+    if (!id) return []
+    return getPushTargets(state, id)
   }, [state])
 
   const getEffectiveMoveDistanceCallback = useCallback((pieceId: string) => {

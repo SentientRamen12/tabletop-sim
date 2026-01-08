@@ -6,7 +6,7 @@ import { areAdjacent } from '../game/board'
 /**
  * V2 AI Strategy: Hero-first approach
  * Priority:
- * 0. Use Pusher ability FIRST (it's FREE, once per turn)
+ * 0. Use Pusher ability FIRST (FREE, no card required, once per turn)
  * 1. Move hero toward center (hero is ALWAYS on board)
  * 2. Move Escort to stay adjacent to hero
  * 3. Summon supports when beneficial
@@ -18,6 +18,34 @@ export function getAIAction(state: GameState): GameAction | null {
   const hand = state.hands.find(h => h.playerId === state.currentPlayerId)
   if (!hand || hand.cards.length === 0) {
     return { type: 'REFRESH_HAND' }
+  }
+
+  // Pusher ability can be used during select_card OR select_action (FREE, no card needed)
+  // Try to use it first if available
+  if ((state.phase === 'select_card' || state.phase === 'select_action') && !state.pusherUsedThisTurn) {
+    const myPieces = state.pieces.filter(
+      p => p.playerId === state.currentPlayerId && !p.isFinished
+    )
+    const hero = myPieces.find(p => p.kind === 'hero')
+    const supports = myPieces.filter(p => p.kind === 'support')
+    const pusher = supports.find(s => s.supportType === 'pusher' && s.position)
+    
+    if (pusher && hero?.position) {
+      const pushTargets = getPushTargets(state, pusher.id)
+      // Push enemy pieces that are near hero
+      const enemyNearHero = pushTargets.find(target =>
+        target.playerId !== state.currentPlayerId &&
+        areAdjacent(target.position!, hero.position!)
+      )
+      if (enemyNearHero) {
+        return { type: 'ACTIVATE_PUSHER', pieceId: pusher.id }
+      }
+      // Also push any enemy if pusher is adjacent
+      const anyEnemy = pushTargets.find(target => target.playerId !== state.currentPlayerId)
+      if (anyEnemy) {
+        return { type: 'ACTIVATE_PUSHER', pieceId: pusher.id }
+      }
+    }
   }
 
   if (state.phase === 'select_card') {
@@ -34,28 +62,6 @@ export function getAIAction(state: GameState): GameAction | null {
     const hero = myPieces.find(p => p.kind === 'hero')
     const supports = myPieces.filter(p => p.kind === 'support')
     const roster = state.supportRosters.find(r => r.playerId === state.currentPlayerId)
-
-    // Priority 0: Use Pusher ability FIRST (it's FREE, once per turn)
-    // Push enemies near hero before doing card-based action
-    if (!state.pusherUsedThisTurn) {
-      const pusher = supports.find(s => s.supportType === 'pusher' && s.position)
-      if (pusher && hero?.position) {
-        const pushTargets = getPushTargets(state, pusher.id)
-        // Push enemy pieces that are near hero
-        const enemyNearHero = pushTargets.find(target =>
-          target.playerId !== state.currentPlayerId &&
-          areAdjacent(target.position!, hero.position!)
-        )
-        if (enemyNearHero) {
-          return { type: 'ACTIVATE_PUSHER', pieceId: pusher.id }
-        }
-        // Also push any enemy if pusher is adjacent
-        const anyEnemy = pushTargets.find(target => target.playerId !== state.currentPlayerId)
-        if (anyEnemy) {
-          return { type: 'ACTIVATE_PUSHER', pieceId: pusher.id }
-        }
-      }
-    }
 
     // Priority 1: Move hero (hero is ALWAYS on board)
     if (hero) {
