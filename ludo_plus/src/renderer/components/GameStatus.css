@@ -140,3 +140,82 @@
   color: #e94560;
   border-color: #e94560;
 }
+
+/* Portal choice phase */
+.portal-choice h3,
+.steal-choice h3 {
+  color: #eee;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.portal-hint,
+.steal-hint {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.portal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.claim-btn {
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2) !important;
+}
+
+.claim-btn:hover {
+  background: linear-gradient(135deg, #ab47bc, #8e24aa) !important;
+}
+
+.skip-btn,
+.cancel-btn {
+  background: transparent !important;
+  border: 1px solid #555 !important;
+  color: #888 !important;
+}
+
+.skip-btn:hover,
+.cancel-btn:hover {
+  border-color: #888 !important;
+  color: #aaa !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Steal portal */
+.steal-btn {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2) !important;
+  color: #fff !important;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.steal-btn:hover {
+  background: linear-gradient(135deg, #ab47bc, #8e24aa) !important;
+}
+
+.steal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.steal-card-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(156, 39, 176, 0.2) !important;
+  border: 1px solid rgba(156, 39, 176, 0.4) !important;
+  color: #ce93d8 !important;
+  border-radius: 6px;
+}
+
+.steal-card-btn:hover {
+  background: rgba(156, 39, 176, 0.3) !important;
+  color: #e1bee7 !important;
+}

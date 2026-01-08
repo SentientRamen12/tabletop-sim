@@ -97,37 +97,36 @@
   border-color: #f9c74f;
 }
 
-.cell-colored-safe {
-  border: 2px dashed rgba(255, 255, 255, 0.4);
+/* Summon points - unclaimed (grey) */
+.cell-summon {
+  background: #4a4a5a;
+  border: 2px dashed #666;
+  border-radius: 50%;
 }
 
-.colored-safe-red {
-  background: rgba(233, 69, 96, 0.25);
+/* Claimed summon points */
+.summon-red {
+  background: rgba(233, 69, 96, 0.4);
   border-color: #e94560;
+  border-style: solid;
 }
 
-.colored-safe-blue {
-  background: rgba(15, 76, 117, 0.25);
+.summon-blue {
+  background: rgba(15, 76, 117, 0.4);
   border-color: #0f4c75;
+  border-style: solid;
 }
 
-.colored-safe-green {
-  background: rgba(58, 150, 121, 0.25);
+.summon-green {
+  background: rgba(58, 150, 121, 0.4);
   border-color: #3a9679;
+  border-style: solid;
 }
 
-.colored-safe-yellow {
-  background: rgba(249, 199, 79, 0.25);
+.summon-yellow {
+  background: rgba(249, 199, 79, 0.4);
   border-color: #f9c74f;
-}
-
-.pieces-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-style: solid;
 }
 
 .piece {
@@ -139,6 +138,9 @@
   border: 2px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
@@ -164,7 +166,7 @@
 }
 
 .piece.selectable:hover {
-  transform: scale(1.2);
+  transform: translate(-50%, -50%) scale(1.2);
   box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
 }
 

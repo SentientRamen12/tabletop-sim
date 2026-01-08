@@ -113,21 +113,15 @@ export const ALL_PATH_CELLS: Position[] = [
   CENTER
 ]
 
-// Safe spots: entry squares + ring 1 corners (middle spiral)
+// Safe spots: entry squares only
 export const SAFE_POSITIONS: Position[] = [
-  { row: 0, col: 3 }, { row: 3, col: 6 }, { row: 6, col: 3 }, { row: 3, col: 0 },
-  { row: 1, col: 1 }, { row: 1, col: 5 }, { row: 5, col: 1 }, { row: 5, col: 5 }
+  { row: 0, col: 3 }, { row: 3, col: 6 }, { row: 6, col: 3 }, { row: 3, col: 0 }
 ]
 
-// Colored safe spots on ring 2 (last spiral) - one per player
-export const COLORED_SAFE_POSITIONS: Record<PlayerColor, Position> = {
-  red: { row: 2, col: 3 },
-  yellow: { row: 3, col: 2 },
-  green: { row: 4, col: 3 },
-  blue: { row: 3, col: 4 }
-}
-
-export const MAX_PIECES_PER_CELL = 2
+// Summon points: ring 1 corners (can be claimed for alternate entry)
+export const SUMMON_POSITIONS: Position[] = [
+  { row: 1, col: 1 }, { row: 1, col: 5 }, { row: 5, col: 1 }, { row: 5, col: 5 }
+]
 
 // Right-angled corner triangles marking spiral turn points
 // Corner indicates which corner the triangle is in - hypotenuse POINTS toward spiral direction
@@ -168,14 +162,10 @@ export function isSafePosition(pos: Position): boolean {
   return SAFE_POSITIONS.some(s => s.row === pos.row && s.col === pos.col)
 }
 
-export function isColoredSafe(pos: Position, color: PlayerColor): boolean {
-  const safe = COLORED_SAFE_POSITIONS[color]
-  return safe.row === pos.row && safe.col === pos.col
+export function isSummonPosition(pos: Position): boolean {
+  return SUMMON_POSITIONS.some(s => s.row === pos.row && s.col === pos.col)
 }
 
-export function isAnySafeForPlayer(pos: Position, color: PlayerColor): boolean {
-  return isSafePosition(pos) || isColoredSafe(pos, color)
-}
 
 export function isCenter(pos: Position): boolean {
   return pos.row === CENTER.row && pos.col === CENTER.col
@@ -191,7 +181,7 @@ export function getPositionForPlayer(color: PlayerColor, pathIndex: number): Pos
   return path[pathIndex]
 }
 
-export type CellType = 'empty' | 'path' | 'safe' | 'center' | 'entry' | 'colored-safe'
+export type CellType = 'empty' | 'path' | 'safe' | 'center' | 'entry' | 'summon'
 
 export function getCellType(row: number, col: number): CellType {
   const pos = { row, col }
@@ -206,23 +196,11 @@ export function getCellType(row: number, col: number): CellType {
 
   if (isSafePosition(pos)) return 'safe'
 
-  // Check if colored safe
-  for (const color of Object.keys(COLORED_SAFE_POSITIONS) as PlayerColor[]) {
-    if (isColoredSafe(pos, color)) return 'colored-safe'
-  }
+  if (isSummonPosition(pos)) return 'summon'
 
   return 'path'
 }
 
-export function getColoredSafeColor(row: number, col: number): PlayerColor | null {
-  const pos = { row, col }
-  for (const [color, safePos] of Object.entries(COLORED_SAFE_POSITIONS)) {
-    if (safePos.row === pos.row && safePos.col === pos.col) {
-      return color as PlayerColor
-    }
-  }
-  return null
-}
 
 export function getEntryColor(row: number, col: number): PlayerColor | null {
   for (const [color, pos] of Object.entries(ENTRY_POSITIONS)) {

@@ -30,7 +30,7 @@ export default function App() {
             <li>Play a card to move a piece or enter a new piece</li>
             <li>Race your 4 pieces around the spiral to the center</li>
             <li>Land on opponents to send them home (except safe spots)</li>
-            <li>Max 2 pieces per cell; safe spots allow coexistence</li>
+            <li>Claim grey summon points to spawn pieces closer to center</li>
             <li>Exact card needed to reach center</li>
             <li>First to get all pieces to center wins</li>
           </ul>

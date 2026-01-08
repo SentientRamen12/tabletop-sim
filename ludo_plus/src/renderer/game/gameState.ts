@@ -3,15 +3,65 @@ import { createPlayerHand, playCard, drawCard, getCardById, refreshHand } from '
 import {
   ENTRY_POSITIONS,
   TOTAL_PATH_LENGTH,
-  MAX_PIECES_PER_CELL,
   isSafePosition,
-  isColoredSafe,
+  isSummonPosition,
   positionsEqual,
-  getPositionForPlayer
+  getPositionForPlayer,
+  PLAYER_PATHS
 } from './board'
 
 const ALL_COLORS: PlayerColor[] = ['red', 'blue', 'green', 'yellow']
 const PIECES_PER_PLAYER = 4
+const MAX_PIECES_PER_CELL = 2
+
+/**
+ * Calculate move result - pieces can pass through others, only check at final landing spot.
+ * Returns the final pathIndex and any piece that would be captured.
+ */
+function calculateMove(
+  pieces: Piece[],
+  movingPiece: Piece,
+  color: PlayerColor,
+  steps: number
+): { finalIndex: number; capturedPieceId: string | null; blocked: boolean } {
+  const centerIndex = TOTAL_PATH_LENGTH - 1
+  const startIndex = movingPiece.pathIndex
+  const targetIndex = Math.min(startIndex + steps, centerIndex)
+
+  // Can't overshoot center
+  if (startIndex + steps > centerIndex) {
+    return { finalIndex: startIndex, capturedPieceId: null, blocked: true }
+  }
+
+  const targetPos = getPositionForPlayer(color, targetIndex)
+  if (!targetPos) {
+    return { finalIndex: startIndex, capturedPieceId: null, blocked: true }
+  }
+
+  // Check pieces at target position
+  const piecesAtTarget = pieces.filter(
+    p => p.id !== movingPiece.id && p.position && positionsEqual(p.position, targetPos) && !p.isFinished
+  )
+
+  // Max pieces per cell check
+  if (piecesAtTarget.length >= MAX_PIECES_PER_CELL) {
+    return { finalIndex: startIndex, capturedPieceId: null, blocked: true }
+  }
+
+  if (piecesAtTarget.length > 0) {
+    const pieceAtTarget = piecesAtTarget[0]
+    const isOwnPiece = pieceAtTarget.playerId === movingPiece.playerId
+    if (isOwnPiece || isSafePosition(targetPos)) {
+      // Blocked: can't land here
+      return { finalIndex: startIndex, capturedPieceId: null, blocked: true }
+    }
+    // Capture opponent
+    return { finalIndex: targetIndex, capturedPieceId: pieceAtTarget.id, blocked: false }
+  }
+
+  // Target is empty
+  return { finalIndex: targetIndex, capturedPieceId: null, blocked: false }
+}
 
 export function createInitialState(playerCount: number = 4, humanColor: PlayerColor = 'red', isHotseat: boolean = false): GameState {
   // Reorder colors so human's choice is first
@@ -58,7 +108,9 @@ export function createInitialState(playerCount: number = 4, humanColor: PlayerCo
     winner: null,
     log: [],
     isHotseat,
-    turnReady: !isHotseat // In hotseat mode, first player must click to start
+    turnReady: !isHotseat, // In hotseat mode, first player must click to start
+    claimedSummons: {},
+    pendingPortal: null
   }
 }
 
@@ -115,20 +167,46 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const player = state.players.find(p => p.id === state.currentPlayerId)
       if (!player) return state
 
-      const entryPos = ENTRY_POSITIONS[player.color]
+      const defaultEntryPos = ENTRY_POSITIONS[player.color]
+      const claimedSummonPos = state.claimedSummons[player.color]
 
-      // Check if entry blocked by opponent
-      const pieceAtEntry = state.pieces.find(
-        p => p.position && positionsEqual(p.position, entryPos) && !p.isFinished
-      )
-      if (pieceAtEntry && pieceAtEntry.playerId !== state.currentPlayerId) {
-        return state
+      // Determine which entry to use based on usePortal flag
+      let entryPos: typeof defaultEntryPos
+      let pathIndex: number
+
+      if (action.usePortal && claimedSummonPos) {
+        // Use portal (claimed summon point) - blocked by ANY piece
+        const piecesAtSummon = state.pieces.filter(
+          p => p.position && positionsEqual(p.position, claimedSummonPos) && !p.isFinished
+        )
+        if (piecesAtSummon.length > 0) {
+          return state // Portal blocked
+        }
+        const summonPathIndex = PLAYER_PATHS[player.color].findIndex(
+          pos => positionsEqual(pos, claimedSummonPos)
+        )
+        if (summonPathIndex < 0) return state
+        entryPos = claimedSummonPos
+        pathIndex = summonPathIndex
+      } else {
+        // Use default start entry
+        const piecesAtEntry = state.pieces.filter(
+          p => p.position && positionsEqual(p.position, defaultEntryPos) && !p.isFinished
+        )
+        // Blocked if at max capacity OR opponent present
+        if (piecesAtEntry.length >= MAX_PIECES_PER_CELL) {
+          return state // Entry at max capacity
+        }
+        if (piecesAtEntry.some(p => p.playerId !== state.currentPlayerId)) {
+          return state // Start blocked by opponent
+        }
+        entryPos = defaultEntryPos
+        pathIndex = 0
       }
 
-      // Enter at path index 0 (entry position)
       const newPieces = state.pieces.map(p =>
         p.id === piece.id
-          ? { ...p, position: entryPos, pathIndex: 0 }
+          ? { ...p, position: entryPos, pathIndex }
           : p
       )
 
@@ -162,43 +240,28 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!player) return state
 
       const steps = state.selectedCard.value
-      const newPathIndex = piece.pathIndex + steps
-      const centerIndex = TOTAL_PATH_LENGTH - 1
+      const { finalIndex, capturedPieceId, blocked } = calculateMove(state.pieces, piece, player.color, steps)
 
-      if (newPathIndex > centerIndex) {
-        return state // Overshoot
-      }
-
-      const newPos = getPositionForPlayer(player.color, newPathIndex)
-      if (!newPos) return state
-
-      const isFinishing = newPathIndex === centerIndex
-
-      // Check pieces at target
-      let newPieces = [...state.pieces]
-      const piecesAtTarget = newPieces.filter(
-        p => p.position && positionsEqual(p.position, newPos) && !p.isFinished
-      )
-      const opponentPieces = piecesAtTarget.filter(p => p.playerId !== state.currentPlayerId)
-
-      // Max 2 pieces per cell (any color)
-      if (piecesAtTarget.length >= MAX_PIECES_PER_CELL) {
+      // Blocked - can't move
+      if (blocked) {
         return state
       }
 
-      // Handle opponent interaction
-      let capturedPlayer: Player | undefined
-      if (!isFinishing && opponentPieces.length > 0) {
-        const isSafe = isSafePosition(newPos)
-        const opponentOnColoredSafe = opponentPieces.some(p => isColoredSafe(newPos, p.color))
+      const centerIndex = TOTAL_PATH_LENGTH - 1
+      const newPos = getPositionForPlayer(player.color, finalIndex)
+      if (!newPos) return state
 
-        if (isSafe || opponentOnColoredSafe) {
-          // Safe spot: coexist (no capture), already checked 2-piece limit above
-        } else {
-          // Not safe: capture the opponent
-          capturedPlayer = state.players.find(p => p.id === opponentPieces[0].playerId)
+      const isFinishing = finalIndex === centerIndex
+
+      // Handle capture
+      let newPieces = [...state.pieces]
+      let capturedPlayer: Player | undefined
+      if (capturedPieceId) {
+        const capturedPiece = newPieces.find(p => p.id === capturedPieceId)
+        if (capturedPiece) {
+          capturedPlayer = state.players.find(p => p.id === capturedPiece.playerId)
           newPieces = newPieces.map(p =>
-            p.id === opponentPieces[0].id
+            p.id === capturedPieceId
               ? { ...p, position: null, pathIndex: -1 }
               : p
           )
@@ -207,7 +270,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       newPieces = newPieces.map(p =>
         p.id === piece.id
-          ? { ...p, position: newPos, pathIndex: newPathIndex, isFinished: isFinishing }
+          ? { ...p, position: newPos, pathIndex: finalIndex, isFinished: isFinishing }
           : p
       )
 
@@ -230,6 +293,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         newLog.push(createLogEntry(player, 'captured', undefined, capturedPlayer.name))
       }
 
+      // Check if landing on unclaimed summon point
+      let newClaimedSummons = state.claimedSummons
+      let pendingPortal: typeof state.pendingPortal = null
+      
+      if (!isFinishing && isSummonPosition(newPos)) {
+        const alreadyClaimed = Object.values(state.claimedSummons).some(
+          pos => pos && positionsEqual(pos, newPos)
+        )
+        if (!alreadyClaimed) {
+          if (!state.claimedSummons[player.color]) {
+            // No existing portal - auto claim
+            newClaimedSummons = { ...state.claimedSummons, [player.color]: newPos }
+            newLog.push(createLogEntry(player, 'claimed'))
+          } else {
+            // Has existing portal - enter portal_choice phase
+            pendingPortal = newPos
+          }
+        }
+      }
+
       const playerPieces = newPieces.filter(p => p.playerId === state.currentPlayerId)
       const allFinished = playerPieces.every(p => p.isFinished)
 
@@ -241,7 +324,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           selectedCard: null,
           phase: 'game_over',
           winner: state.currentPlayerId,
-          log: newLog
+          log: newLog,
+          claimedSummons: newClaimedSummons,
+          pendingPortal: null
+        }
+      }
+
+      // If there's a pending portal choice, go to portal_choice phase
+      if (pendingPortal) {
+        return {
+          ...state,
+          pieces: newPieces,
+          hands: newHands,
+          selectedCard: null,
+          log: newLog,
+          claimedSummons: newClaimedSummons,
+          phase: 'portal_choice',
+          pendingPortal
         }
       }
 
@@ -250,7 +349,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         pieces: newPieces,
         hands: newHands,
         selectedCard: null,
-        log: newLog
+        log: newLog,
+        claimedSummons: newClaimedSummons,
+        pendingPortal: null
       })
     }
 
@@ -297,6 +398,71 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       })
     }
 
+    case 'CLAIM_PORTAL': {
+      if (state.phase !== 'portal_choice' || !state.pendingPortal) return state
+
+      const player = state.players.find(p => p.id === state.currentPlayerId)
+      if (!player) return state
+
+      const newClaimedSummons = { ...state.claimedSummons, [player.color]: state.pendingPortal }
+      const newLog = [...state.log, createLogEntry(player, 'claimed')]
+
+      return endTurn({
+        ...state,
+        claimedSummons: newClaimedSummons,
+        pendingPortal: null,
+        log: newLog
+      })
+    }
+
+    case 'SKIP_PORTAL': {
+      if (state.phase !== 'portal_choice') return state
+
+      return endTurn({
+        ...state,
+        pendingPortal: null
+      })
+    }
+
+    case 'STEAL_PORTAL': {
+      if (state.phase !== 'select_action') return state
+
+      const player = state.players.find(p => p.id === state.currentPlayerId)
+      if (!player) return state
+
+      // Find who owns this portal - must be a claimed portal
+      let previousOwner: PlayerColor | null = null
+      for (const [color, pos] of Object.entries(state.claimedSummons)) {
+        if (pos && positionsEqual(pos, action.position)) {
+          previousOwner = color as PlayerColor
+          break
+        }
+      }
+      if (!previousOwner || previousOwner === player.color) return state
+
+      // Check if a piece is on the portal and piece color ≠ portal color
+      const pieceAtPos = state.pieces.find(
+        p => p.position && positionsEqual(p.position, action.position) && !p.isFinished
+      )
+      if (!pieceAtPos || pieceAtPos.color === previousOwner) return state
+
+      // Update claimed summons: remove previous owner's claim, add current player's
+      const newClaimedSummons = { ...state.claimedSummons }
+      delete newClaimedSummons[previousOwner]
+      newClaimedSummons[player.color] = action.position
+
+      const targetPlayer = state.players.find(p => p.color === previousOwner)?.name
+      const newLog = [...state.log, createLogEntry(player, 'stole', undefined, targetPlayer)]
+
+      return endTurn({
+        ...state,
+        claimedSummons: newClaimedSummons,
+        selectedCard: null,
+        log: newLog,
+        pendingPortal: null
+      })
+    }
+
     case 'RESET_GAME': {
       return createInitialState(action.playerCount, action.humanColor, action.isHotseat)
     }
@@ -319,49 +485,85 @@ function endTurn(state: GameState): GameState {
     currentPlayerId: nextPlayer.id,
     phase: 'select_card',
     selectedCard: null,
-    turnReady
+    turnReady,
+    pendingPortal: null
   }
 }
 
-export function getValidMoves(state: GameState, pieceId: string): { canMove: boolean; canEnter: boolean } {
-  if (!state.selectedCard) return { canMove: false, canEnter: false }
+export function getValidMoves(state: GameState, pieceId: string): { 
+  canMove: boolean
+  canEnterStart: boolean
+  canEnterPortal: boolean 
+} {
+  if (!state.selectedCard) return { canMove: false, canEnterStart: false, canEnterPortal: false }
 
   const piece = state.pieces.find(p => p.id === pieceId)
   if (!piece || piece.playerId !== state.currentPlayerId || piece.isFinished) {
-    return { canMove: false, canEnter: false }
+    return { canMove: false, canEnterStart: false, canEnterPortal: false }
   }
 
   const player = state.players.find(p => p.id === state.currentPlayerId)
-  if (!player) return { canMove: false, canEnter: false }
+  if (!player) return { canMove: false, canEnterStart: false, canEnterPortal: false }
 
   const steps = state.selectedCard.value
 
   if (piece.position === null) {
-    const entryPos = ENTRY_POSITIONS[player.color]
-    const pieceAtEntry = state.pieces.find(
-      p => p.position && positionsEqual(p.position, entryPos) && p.playerId !== state.currentPlayerId
+    // Check default entry
+    const defaultEntryPos = ENTRY_POSITIONS[player.color]
+    const piecesAtDefaultEntry = state.pieces.filter(
+      p => p.position && positionsEqual(p.position, defaultEntryPos) && !p.isFinished
     )
-    return { canMove: false, canEnter: !pieceAtEntry }
+    // Can enter if: not at max AND no opponent blocking
+    const canEnterStart = piecesAtDefaultEntry.length < MAX_PIECES_PER_CELL && 
+                          !piecesAtDefaultEntry.some(p => p.playerId !== state.currentPlayerId)
+
+    // Check claimed summon point (portal) - blocked by ANY piece
+    const claimedSummonPos = state.claimedSummons[player.color]
+    let canEnterPortal = false
+    if (claimedSummonPos) {
+      const piecesAtSummon = state.pieces.filter(
+        p => p.position && positionsEqual(p.position, claimedSummonPos) && !p.isFinished
+      )
+      canEnterPortal = piecesAtSummon.length === 0
+    }
+
+    return { canMove: false, canEnterStart, canEnterPortal }
   }
 
-  const newPathIndex = piece.pathIndex + steps
-  const centerIndex = TOTAL_PATH_LENGTH - 1
+  // Check if piece can move (not blocked)
+  const { blocked } = calculateMove(state.pieces, piece, player.color, steps)
 
-  if (newPathIndex > centerIndex) {
-    return { canMove: false, canEnter: false }
+  return { canMove: !blocked, canEnterStart: false, canEnterPortal: false }
+}
+
+/**
+ * Get positions where player can claim a portal (piece on portal but piece color ≠ portal color)
+ */
+export function getStealablePortals(state: GameState): { position: Position; ownerColor: PlayerColor }[] {
+  if (state.phase !== 'select_action') return []
+  
+  const player = state.players.find(p => p.id === state.currentPlayerId)
+  if (!player) return []
+
+  const stealable: { position: Position; ownerColor: PlayerColor }[] = []
+
+  // Check each claimed portal
+  for (const [ownerColor, portalPos] of Object.entries(state.claimedSummons)) {
+    if (!portalPos) continue
+    if (ownerColor === player.color) continue // Already our portal
+
+    // Check if ANY piece is on this portal and piece color ≠ portal color
+    const pieceOnPortal = state.pieces.find(
+      p => p.position && 
+           positionsEqual(p.position, portalPos) && 
+           !p.isFinished &&
+           p.color !== ownerColor  // Piece color different from portal color
+    )
+
+    if (pieceOnPortal) {
+      stealable.push({ position: portalPos, ownerColor: ownerColor as PlayerColor })
+    }
   }
 
-  const newPos = getPositionForPlayer(player.color, newPathIndex)
-  if (!newPos) return { canMove: false, canEnter: false }
-
-  const piecesAtTarget = state.pieces.filter(
-    p => p.position && positionsEqual(p.position, newPos) && !p.isFinished
-  )
-
-  // Max 2 pieces per cell (any color)
-  if (piecesAtTarget.length >= MAX_PIECES_PER_CELL) {
-    return { canMove: false, canEnter: false }
-  }
-
-  return { canMove: true, canEnter: false }
+  return stealable
 }

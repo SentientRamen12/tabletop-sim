@@ -6,9 +6,10 @@ interface GameStatusProps {
 }
 
 export default function GameStatus({ onExit }: GameStatusProps) {
-  const { state, refreshHand } = useGame()
+  const { state, refreshHand, claimPortal, skipPortal, stealPortal, getStealablePortals } = useGame()
 
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
+  const stealable = getStealablePortals()
 
   if (state.phase === 'game_over') {
     const winner = state.players.find(p => p.id === state.winner)
@@ -22,6 +23,25 @@ export default function GameStatus({ onExit }: GameStatusProps) {
       </div>
     )
   }
+
+  // Portal choice phase
+  if (state.phase === 'portal_choice' && !currentPlayer?.isAI) {
+    return (
+      <div className="game-status portal-choice">
+        <h3>Update Portal?</h3>
+        <p className="portal-hint">You landed on an unclaimed portal.</p>
+        <div className="portal-buttons">
+          <button className="claim-btn" onClick={claimPortal}>
+            Update Portal
+          </button>
+          <button className="skip-btn" onClick={skipPortal}>
+            Keep Current
+          </button>
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div className="game-status">
@@ -37,10 +57,6 @@ export default function GameStatus({ onExit }: GameStatusProps) {
           const finished = state.pieces.filter(
             p => p.playerId === player.id && p.isFinished
           ).length
-          const onBoard = state.pieces.filter(
-            p => p.playerId === player.id && p.position !== null && !p.isFinished
-          ).length
-          const atHome = 4 - finished - onBoard
 
           return (
             <div
@@ -56,7 +72,12 @@ export default function GameStatus({ onExit }: GameStatusProps) {
           )
         })}
       </div>
-      {currentPlayer && !currentPlayer.isAI && state.turnReady && (
+      {currentPlayer && !currentPlayer.isAI && state.turnReady && state.phase === 'select_action' && stealable.length > 0 && (
+        <button className="steal-btn" onClick={() => stealPortal(stealable[0].position)}>
+          Claim Portal
+        </button>
+      )}
+      {currentPlayer && !currentPlayer.isAI && state.turnReady && state.phase === 'select_action' && (
         <button className="refresh-btn" onClick={refreshHand}>
           Refresh Hand
         </button>

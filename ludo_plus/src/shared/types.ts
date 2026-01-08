@@ -37,7 +37,7 @@ export interface LogEntry {
   id: string
   playerName: string
   playerColor: PlayerColor
-  action: 'moved' | 'entered' | 'captured' | 'finished' | 'skipped' | 'refreshed'
+  action: 'moved' | 'entered' | 'captured' | 'finished' | 'skipped' | 'refreshed' | 'claimed' | 'stole'
   cardValue?: number
   targetPlayer?: string
 }
@@ -47,19 +47,24 @@ export interface GameState {
   pieces: Piece[]
   hands: PlayerHand[]
   currentPlayerId: string
-  phase: 'select_card' | 'select_action' | 'game_over'
+  phase: 'select_card' | 'select_action' | 'portal_choice' | 'game_over'
   selectedCard: Card | null
   winner: string | null
   log: LogEntry[]
   isHotseat: boolean
   turnReady: boolean
+  claimedSummons: Partial<Record<PlayerColor, Position>>
+  pendingPortal: Position | null  // summon position player can claim/update
 }
 
 export type GameAction =
   | { type: 'SELECT_CARD'; cardId: string }
   | { type: 'UNSELECT_CARD' }
   | { type: 'MOVE_PIECE'; pieceId: string }
-  | { type: 'ENTER_PIECE'; pieceId: string }
+  | { type: 'ENTER_PIECE'; pieceId: string; usePortal?: boolean }
+  | { type: 'CLAIM_PORTAL' }        // Claim/update portal at pendingPortal position
+  | { type: 'SKIP_PORTAL' }         // Skip claiming the pending portal
+  | { type: 'STEAL_PORTAL'; position: Position }  // Claim portal when piece on it isn't portal's color
   | { type: 'END_TURN' }
   | { type: 'START_TURN' }
   | { type: 'REFRESH_HAND' }
