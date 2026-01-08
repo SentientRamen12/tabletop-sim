@@ -11,7 +11,13 @@ const ACTION_LABELS: Record<LogEntry['action'], string> = {
   skipped: 'Skip',
   refreshed: 'Refresh',
   claimed: 'Claim',
-  stole: 'Steal'
+  stole: 'Steal',
+  // V2 actions
+  summoned: 'Summon',
+  hero_reset: 'Reset',
+  support_removed: 'Lost',
+  ability_used: 'Ability',
+  intercepted: 'Blocked'
 }
 
 export default function GameLog() {
