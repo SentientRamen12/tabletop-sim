@@ -118,10 +118,19 @@ function calculateMove(
     const pieceAtTarget = piecesAtTarget[0]
     const isOwnPiece = pieceAtTarget.playerId === movingPiece.playerId
 
-    // V2: Safe spots only protect heroes, not supports
+    // V2: Safe spots protect heroes
     const isProtectedBySafe = isSafePosition(targetPos) && pieceAtTarget.kind === 'hero'
 
-    if (isOwnPiece || isProtectedBySafe) {
+    // Start space is safe for pieces of the SAME COLOR (their own entry position)
+    const isAtOwnStart = positionsEqual(targetPos, ENTRY_POSITIONS[pieceAtTarget.color])
+    const isProtectedByStart = isAtOwnStart
+
+    // Pusher can only be killed by hero
+    const isPusherProtected = pieceAtTarget.kind === 'support' && 
+                              pieceAtTarget.supportType === 'pusher' && 
+                              movingPiece.kind !== 'hero'
+
+    if (isOwnPiece || isProtectedBySafe || isProtectedByStart || isPusherProtected) {
       // Blocked: can't land here
       return { finalIndex: startIndex, capturedPieceId: null, blocked: true, intercepted: false, interceptedBy: null, assassinDies: false }
     }
@@ -637,11 +646,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
       if (!previousOwner || previousOwner === player.color) return state
 
-      // Check if a piece is on the portal and piece color ≠ portal color
+      // Check if CURRENT PLAYER'S piece is on the portal (must be on portal to claim it)
       const pieceAtPos = state.pieces.find(
-        p => p.position && positionsEqual(p.position, action.position) && !p.isFinished
+        p => p.position && 
+             positionsEqual(p.position, action.position) && 
+             !p.isFinished &&
+             p.playerId === state.currentPlayerId  // Must be YOUR piece on the portal
       )
-      if (!pieceAtPos || pieceAtPos.color === previousOwner) return state
+      if (!pieceAtPos) return state
 
       // Update claimed summons: remove previous owner's claim, add current player's
       const newClaimedSummons = { ...state.claimedSummons }
@@ -808,28 +820,39 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       )
 
       if (pieceAtDest) {
-        // Pushed piece "captures" the piece at destination (pushed = attacker)
-        const capturedPlayer = state.players.find(p => p.id === pieceAtDest.playerId)
+        // Check protections before capture
+        // Start space protects pieces of same color
+        const isAtOwnStart = positionsEqual(pushDest, ENTRY_POSITIONS[pieceAtDest.color])
+        // Pusher can only be killed by hero (pushed piece = attacker)
+        const isPusherProtected = pieceAtDest.kind === 'support' && 
+                                  pieceAtDest.supportType === 'pusher' && 
+                                  target.kind !== 'hero'
 
-        if (pieceAtDest.kind === 'hero') {
-          // Hero respawns at start position (always on board)
-          newPieces = newPieces.map(p =>
-            p.id === pieceAtDest.id ? { ...p, position: ENTRY_POSITIONS[pieceAtDest.color], pathIndex: 0 } : p
-          )
-          newLog.push(createLogEntry(capturedPlayer!, 'hero_reset'))
-        } else {
-          // Support removed
-          newPieces = newPieces.filter(p => p.id !== pieceAtDest.id)
-          newSupportRosters = newSupportRosters.map(roster =>
-            roster.playerId === pieceAtDest.playerId
-              ? {
-                  ...roster,
-                  onField: roster.onField.filter(id => id !== pieceAtDest.id),
-                  available: [...roster.available, pieceAtDest.supportType!]
-                }
-              : roster
-          )
+        if (!isAtOwnStart && !isPusherProtected) {
+          // Pushed piece "captures" the piece at destination (pushed = attacker)
+          const capturedPlayer = state.players.find(p => p.id === pieceAtDest.playerId)
+
+          if (pieceAtDest.kind === 'hero') {
+            // Hero respawns at start position (always on board)
+            newPieces = newPieces.map(p =>
+              p.id === pieceAtDest.id ? { ...p, position: ENTRY_POSITIONS[pieceAtDest.color], pathIndex: 0 } : p
+            )
+            newLog.push(createLogEntry(capturedPlayer!, 'hero_reset'))
+          } else {
+            // Support removed
+            newPieces = newPieces.filter(p => p.id !== pieceAtDest.id)
+            newSupportRosters = newSupportRosters.map(roster =>
+              roster.playerId === pieceAtDest.playerId
+                ? {
+                    ...roster,
+                    onField: roster.onField.filter(id => id !== pieceAtDest.id),
+                    available: [...roster.available, pieceAtDest.supportType!]
+                  }
+                : roster
+            )
+          }
         }
+        // If protected, piece just stacks (no capture)
       }
 
       // Check if push into center
@@ -993,15 +1016,15 @@ export function getStealablePortals(state: GameState): { position: Position; own
     if (!portalPos) continue
     if (ownerColor === player.color) continue // Already our portal
 
-    // Check if ANY piece is on this portal and piece color ≠ portal color
-    const pieceOnPortal = state.pieces.find(
+    // Check if YOUR piece is on this portal (must be on portal to claim it)
+    const myPieceOnPortal = state.pieces.find(
       p => p.position && 
            positionsEqual(p.position, portalPos) && 
            !p.isFinished &&
-           p.color !== ownerColor  // Piece color different from portal color
+           p.playerId === state.currentPlayerId  // YOUR piece must be on the portal
     )
 
-    if (pieceOnPortal) {
+    if (myPieceOnPortal) {
       stealable.push({ position: portalPos, ownerColor: ownerColor as PlayerColor })
     }
   }
