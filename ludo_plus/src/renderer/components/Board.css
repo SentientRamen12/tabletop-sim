@@ -225,3 +225,96 @@
   border-bottom: 14px solid var(--arrow-color);
   border-left: 14px solid transparent;
 }
+
+/* V2: Hero styling - larger, gold crown indicator */
+.piece-hero {
+  width: 80%;
+  height: 80%;
+  max-width: 36px;
+  max-height: 36px;
+  border-width: 3px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+  z-index: 10;
+}
+
+.piece-hero::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 6px solid gold;
+}
+
+/* V2: Support styling - smaller, dashed border, icon */
+.piece-support {
+  width: 55%;
+  height: 55%;
+  max-width: 26px;
+  max-height: 26px;
+  border-style: dashed;
+  border-width: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-icon {
+  font-size: 0.6rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px black;
+  position: absolute;
+}
+
+/* Support type-specific accent colors */
+.piece-escort {
+  border-color: #4fc3f7 !important;
+  box-shadow: 0 0 6px rgba(79, 195, 247, 0.5);
+}
+
+.piece-blocker {
+  border-color: #ff7043 !important;
+  box-shadow: 0 0 6px rgba(255, 112, 67, 0.5);
+}
+
+.piece-assassin {
+  border-color: #ab47bc !important;
+  box-shadow: 0 0 6px rgba(171, 71, 188, 0.5);
+}
+
+.piece-pusher {
+  border-color: #66bb6a !important;
+  box-shadow: 0 0 6px rgba(102, 187, 106, 0.5);
+}
+
+/* Push target highlight */
+.piece.push-target {
+  animation: push-pulse 0.8s ease-in-out infinite;
+}
+
+.piece.push-target.selectable {
+  cursor: crosshair;
+}
+
+@keyframes push-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(102, 187, 106, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(102, 187, 106, 0);
+  }
+}
+
+/* Multiple pieces in cell - offset them */
+.cell .piece:nth-child(2) {
+  transform: translate(-30%, -30%);
+}
+
+.cell .piece:nth-child(2).selectable:hover {
+  transform: translate(-30%, -30%) scale(1.2);
+}

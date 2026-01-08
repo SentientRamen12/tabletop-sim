@@ -197,7 +197,8 @@ export function createInitialState(playerCount: number = 4, humanColor: PlayerCo
     turnReady: !isHotseat, // In hotseat mode, first player must click to start
     claimedSummons: {},
     pendingPortal: null,
-    selectedPieceForAbility: null
+    selectedPieceForAbility: null,
+    pusherUsedThisTurn: false
   }
 }
 
@@ -751,9 +752,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     // V2: Pusher ability - enter targeting mode
+    // Pusher ability is FREE (doesn't consume card or end turn) but once per turn
     case 'ACTIVATE_PUSHER': {
       if (state.phase !== 'select_action') return state
-      if (!state.selectedCard) return state
+      if (state.pusherUsedThisTurn) return state  // Already used this turn
 
       const piece = state.pieces.find(p => p.id === action.pieceId)
       if (!piece || piece.playerId !== state.currentPlayerId) return state
@@ -768,10 +770,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     // V2: Execute push on target
+    // Pusher ability is FREE - doesn't consume card or end turn, but once per turn
     case 'EXECUTE_PUSH': {
       if (state.phase !== 'select_push_target') return state
       if (!state.selectedPieceForAbility) return state
-      if (!state.selectedCard) return state
 
       const pusher = state.pieces.find(p => p.id === state.selectedPieceForAbility)
       if (!pusher || !pusher.position) return state
@@ -826,17 +828,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // Check if push into center
       if (isCenter(pushDest)) {
         if (target.kind === 'hero') {
-          // Hero wins!
+          // Hero wins! (game over, but pusher ability was still free)
           newPieces = newPieces.map(p =>
             p.id === target.id ? { ...p, position: pushDest, isFinished: true } : p
-          )
-          const targetPlayer = state.players.find(p => p.id === target.playerId)
-
-          let hand = state.hands.find(h => h.playerId === state.currentPlayerId)!
-          hand = playCard(hand, state.selectedCard.id)
-          hand = drawCard(hand)
-          const newHands = state.hands.map(h =>
-            h.playerId === state.currentPlayerId ? hand : h
           )
 
           newLog.push(createLogEntry(player, 'ability_used', undefined, undefined, 'pusher'))
@@ -844,12 +838,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           return {
             ...state,
             pieces: newPieces,
-            hands: newHands,
             supportRosters: newSupportRosters,
             phase: 'game_over',
             winner: target.playerId,
-            selectedCard: null,
             selectedPieceForAbility: null,
+            pusherUsedThisTurn: true,
             log: newLog
           }
         } else {
@@ -880,25 +873,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         )
       }
 
-      let hand = state.hands.find(h => h.playerId === state.currentPlayerId)!
-      hand = playCard(hand, state.selectedCard.id)
-      hand = drawCard(hand)
+      newLog.push(createLogEntry(player, 'ability_used', undefined, undefined, 'pusher'))
 
-      const newHands = state.hands.map(h =>
-        h.playerId === state.currentPlayerId ? hand : h
-      )
-
-      newLog.push(createLogEntry(player, 'ability_used', state.selectedCard.value, undefined, 'pusher'))
-
-      return endTurn({
+      // FREE action: return to select_action, don't consume card, don't end turn
+      return {
         ...state,
         pieces: newPieces,
-        hands: newHands,
         supportRosters: newSupportRosters,
-        selectedCard: null,
+        phase: 'select_action',
         selectedPieceForAbility: null,
+        pusherUsedThisTurn: true,
         log: newLog
-      })
+      }
     }
 
     // V2: Cancel ability targeting
@@ -932,7 +918,8 @@ function endTurn(state: GameState): GameState {
     selectedCard: null,
     turnReady,
     pendingPortal: null,
-    selectedPieceForAbility: null
+    selectedPieceForAbility: null,
+    pusherUsedThisTurn: false
   }
 }
 

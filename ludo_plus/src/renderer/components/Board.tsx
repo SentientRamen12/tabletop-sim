@@ -1,18 +1,38 @@
 import { useGame } from '../game/GameContext'
 import { BOARD_SIZE, getCellType, getEntryColor, getSpiralArrows, positionsEqual } from '../game/board'
-import type { Piece, PlayerColor } from '../../shared/types'
+import type { Piece, PlayerColor, SupportType } from '../../shared/types'
 import './Board.css'
 
+// Support type icons
+const SUPPORT_ICONS: Record<SupportType, string> = {
+  escort: 'E',
+  blocker: 'B',
+  assassin: 'A',
+  pusher: 'P'
+}
+
 export default function Board() {
-  const { state, movePiece, canMovePiece } = useGame()
+  const {
+    state,
+    movePiece,
+    canMovePiece,
+    executePush,
+    getPushTargets,
+    getEffectiveMoveDistance
+  } = useGame()
 
   const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
-  const currentPieces = state.pieces.filter(p => p.playerId === state.currentPlayerId)
-  const openPieces = currentPieces.filter(p => p.position !== null && !p.isFinished).length
-  const finishedPieces = currentPieces.filter(p => p.isFinished).length
+  const hero = state.pieces.find(p => p.playerId === state.currentPlayerId && p.kind === 'hero')
+  const supportsOnField = state.pieces.filter(
+    p => p.playerId === state.currentPlayerId && p.kind === 'support' && p.position !== null
+  ).length
 
-  const getPieceAtCell = (row: number, col: number): Piece | undefined => {
-    return state.pieces.find(
+  // Get push targets if in push mode
+  const pushTargets = state.phase === 'select_push_target' ? getPushTargets() : []
+  const pushTargetIds = pushTargets.map(p => p.id)
+
+  const getPiecesAtCell = (row: number, col: number): Piece[] => {
+    return state.pieces.filter(
       p => p.position?.row === row && p.position?.col === col && !p.isFinished
     )
   }
@@ -29,6 +49,16 @@ export default function Board() {
 
   const handlePieceClick = (piece: Piece) => {
     if (!state.turnReady) return
+
+    // Handle push target selection
+    if (state.phase === 'select_push_target') {
+      if (pushTargetIds.includes(piece.id)) {
+        executePush(piece.id)
+      }
+      return
+    }
+
+    // Normal movement
     if (piece.playerId !== state.currentPlayerId) return
     if (state.phase !== 'select_action') return
 
@@ -37,20 +67,37 @@ export default function Board() {
     }
   }
 
-  const renderPiece = (piece: Piece | undefined) => {
-    if (!piece) return null
+  const renderPiece = (piece: Piece) => {
+    const isPushTarget = pushTargetIds.includes(piece.id)
+    const isOwnPiece = piece.playerId === state.currentPlayerId
 
-          const isSelectable =
-            state.turnReady &&
-            state.phase === 'select_action' &&
-            piece.playerId === state.currentPlayerId &&
+    // Selectable in normal move mode
+    const isSelectableForMove =
+      state.turnReady &&
+      state.phase === 'select_action' &&
+      isOwnPiece &&
       canMovePiece(piece.id)
 
-          return (
-            <div
-              className={`piece piece-${piece.color} ${isSelectable ? 'selectable' : ''}`}
-              onClick={() => handlePieceClick(piece)}
-            />
+    // Selectable as push target
+    const isSelectableForPush = state.phase === 'select_push_target' && isPushTarget
+
+    const isSelectable = isSelectableForMove || isSelectableForPush
+
+    // Build class names for V2 piece types
+    const kindClass = piece.kind === 'hero' ? 'piece-hero' : 'piece-support'
+    const typeClass = piece.supportType ? `piece-${piece.supportType}` : ''
+    const pushTargetClass = isPushTarget ? 'push-target' : ''
+
+    return (
+      <div
+        key={piece.id}
+        className={`piece piece-${piece.color} ${kindClass} ${typeClass} ${pushTargetClass} ${isSelectable ? 'selectable' : ''}`}
+        onClick={() => handlePieceClick(piece)}
+      >
+        {piece.kind === 'support' && piece.supportType && (
+          <span className="support-icon">{SUPPORT_ICONS[piece.supportType]}</span>
+        )}
+      </div>
     )
   }
 
@@ -61,7 +108,7 @@ export default function Board() {
       const entryColor = getEntryColor(row, col)
       const claimedColor = cellType === 'summon' ? getClaimedSummonColor(row, col) : null
       const arrows = getSpiralArrows(row, col)
-      const piece = getPieceAtCell(row, col)
+      const pieces = getPiecesAtCell(row, col)
 
       grid.push(
         <div
@@ -74,24 +121,40 @@ export default function Board() {
               className={`spiral-arrow arrow-${arrow.corner} arrow-${arrow.color}`}
             />
           ))}
-          {renderPiece(piece)}
+          {pieces.map(piece => renderPiece(piece))}
         </div>
       )
     }
   }
 
+  // Build status text
+  let statusText = ''
+  if (state.phase === 'select_push_target') {
+    statusText = 'Select piece to push'
+  } else if (state.selectedCard) {
+    // Show effective move distance for hero
+    const heroMoveDistance = hero && hero.position ? getEffectiveMoveDistance(hero.id) : state.selectedCard.value
+    if (heroMoveDistance !== state.selectedCard.value) {
+      statusText = `Move ${state.selectedCard.value} (+${heroMoveDistance - state.selectedCard.value} Escort)`
+    } else {
+      statusText = `Move ${state.selectedCard.value}`
+    }
+  } else {
+    statusText = 'Select a card'
+  }
+
   return (
     <div className="board-wrapper">
       <div className="action-status">
-        {state.selectedCard ? (
-          <span className="status-move">Move {state.selectedCard.value}</span>
-        ) : (
-          <span className="status-waiting">Select a card</span>
-        )}
+        <span className={state.selectedCard ? 'status-move' : 'status-waiting'}>
+          {statusText}
+        </span>
         <span className="status-divider">|</span>
-        <span className="status-open">Open {openPieces}</span>
+        <span className="status-open">
+          Hero: {hero?.position ? 'On Board' : hero?.isFinished ? 'Won!' : 'Home'}
+        </span>
         <span className="status-divider">|</span>
-        <span className="status-goal">Reached Goal {finishedPieces}</span>
+        <span className="status-goal">Supports: {supportsOnField}/3</span>
       </div>
       <div className="board">{grid}</div>
     </div>

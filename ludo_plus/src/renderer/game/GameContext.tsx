@@ -1,6 +1,15 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react'
-import type { GameState, Card, PlayerColor, Position } from '../../shared/types'
-import { gameReducer, createInitialState, getValidMoves, getStealablePortals } from './gameState'
+import type { GameState, Card, PlayerColor, Position, SupportType, Piece } from '../../shared/types'
+import {
+  gameReducer,
+  createInitialState,
+  getValidMoves,
+  getStealablePortals,
+  canSummonSupport,
+  getPushTargets,
+  getEffectiveMoveDistance,
+  getCurrentRoster
+} from './gameState'
 import { getAIAction, AI_TURN_DELAY } from '../ai/simpleAI'
 
 interface GameContextType {
@@ -20,6 +29,15 @@ interface GameContextType {
   canMovePiece: (pieceId: string) => boolean
   getCurrentPlayerHand: () => Card[]
   getStealablePortals: () => ReturnType<typeof getStealablePortals>
+  // V2: Support actions
+  summonSupport: (supportType: SupportType, usePortal?: boolean) => void
+  activatePusher: (pieceId: string) => void
+  executePush: (targetPieceId: string) => void
+  cancelAbility: () => void
+  canSummon: (supportType: SupportType) => { canSummon: boolean; canUsePortal: boolean }
+  getPushTargets: () => Piece[]
+  getEffectiveMoveDistance: (pieceId: string) => number
+  getCurrentRoster: () => ReturnType<typeof getCurrentRoster>
 }
 
 const GameContext = createContext<GameContextType | null>(null)
@@ -99,6 +117,40 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
     return getStealablePortals(state)
   }, [state])
 
+  // V2: Support callbacks
+  const summonSupport = useCallback((supportType: SupportType, usePortal?: boolean) => {
+    dispatch({ type: 'SUMMON_SUPPORT', supportType, usePortal })
+  }, [])
+
+  const activatePusher = useCallback((pieceId: string) => {
+    dispatch({ type: 'ACTIVATE_PUSHER', pieceId })
+  }, [])
+
+  const executePush = useCallback((targetPieceId: string) => {
+    dispatch({ type: 'EXECUTE_PUSH', targetPieceId })
+  }, [])
+
+  const cancelAbility = useCallback(() => {
+    dispatch({ type: 'CANCEL_ABILITY' })
+  }, [])
+
+  const canSummon = useCallback((supportType: SupportType) => {
+    return canSummonSupport(state, supportType)
+  }, [state])
+
+  const getPushTargetsCallback = useCallback(() => {
+    if (!state.selectedPieceForAbility) return []
+    return getPushTargets(state, state.selectedPieceForAbility)
+  }, [state])
+
+  const getEffectiveMoveDistanceCallback = useCallback((pieceId: string) => {
+    return getEffectiveMoveDistance(state, pieceId)
+  }, [state])
+
+  const getCurrentRosterCallback = useCallback(() => {
+    return getCurrentRoster(state)
+  }, [state])
+
   // AI turn handling
   useEffect(() => {
     const currentPlayer = state.players.find(p => p.id === state.currentPlayerId)
@@ -141,7 +193,16 @@ export function GameProvider({ children, playerCount = 4, humanColor = 'red', is
         canEnterAtPortal,
         canMovePiece,
         getCurrentPlayerHand,
-        getStealablePortals: getStealablePortalsCallback
+        getStealablePortals: getStealablePortalsCallback,
+        // V2
+        summonSupport,
+        activatePusher,
+        executePush,
+        cancelAbility,
+        canSummon,
+        getPushTargets: getPushTargetsCallback,
+        getEffectiveMoveDistance: getEffectiveMoveDistanceCallback,
+        getCurrentRoster: getCurrentRosterCallback
       }}
     >
       {children}

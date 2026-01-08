@@ -220,3 +220,62 @@ export function getSpiralArrows(row: number, col: number): { color: PlayerColor;
   }
   return arrows
 }
+
+// V2: Adjacency helpers for Escort and Pusher abilities
+
+/**
+ * Get all valid adjacent positions on the board path (orthogonal + diagonal = 8 directions)
+ */
+export function getAdjacentPositions(pos: Position): Position[] {
+  const deltas = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],           [0, 1],
+    [1, -1],  [1, 0],  [1, 1]
+  ]
+
+  const adjacent: Position[] = []
+  for (const [dr, dc] of deltas) {
+    const newPos = { row: pos.row + dr, col: pos.col + dc }
+    // Only include if it's a valid path cell
+    if (ALL_PATH_CELLS.some(p => positionsEqual(p, newPos))) {
+      adjacent.push(newPos)
+    }
+  }
+  return adjacent
+}
+
+/**
+ * Check if two positions are adjacent (including diagonals)
+ */
+export function areAdjacent(a: Position, b: Position): boolean {
+  const rowDiff = Math.abs(a.row - b.row)
+  const colDiff = Math.abs(a.col - b.col)
+  // Adjacent if at most 1 step away in each direction (not same position)
+  return rowDiff <= 1 && colDiff <= 1 && (rowDiff > 0 || colDiff > 0)
+}
+
+/**
+ * Get the direction from one position to another (for push calculation)
+ */
+export function getDirection(from: Position, to: Position): { row: number; col: number } {
+  return {
+    row: Math.sign(to.row - from.row),
+    col: Math.sign(to.col - from.col)
+  }
+}
+
+/**
+ * Get the position after pushing a piece away from the pusher
+ */
+export function getPushDestination(pusherPos: Position, targetPos: Position): Position | null {
+  const direction = getDirection(pusherPos, targetPos)
+  const destPos = {
+    row: targetPos.row + direction.row,
+    col: targetPos.col + direction.col
+  }
+  // Only valid if destination is on the path
+  if (ALL_PATH_CELLS.some(p => positionsEqual(p, destPos))) {
+    return destPos
+  }
+  return null // Can't push off the board
+}
